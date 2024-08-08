@@ -10,8 +10,8 @@ id_pattern = re.compile(r'^.\d+$')
 class Rkn_Bots(object):
     
     # Rkn client config  ( required.. 😥)
-    API_ID = os.environ.get("API_ID", "")
-    API_HASH = os.environ.get("API_HASH", "")
+    API_ID = os.environ.get("API_ID", "22384370")
+    API_HASH = os.environ.get("API_HASH", "05e2be75292ecbec3f7a29bf13b1e29e")
     BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
     # start_pic
@@ -26,7 +26,7 @@ class Rkn_Bots(object):
     
     # database config ( required.. 😥)
     DB_NAME = os.environ.get("DB_NAME", "AutoCaption_V05_Bot")     
-    DB_URL = os.environ.get("DB_URL", "")
+    DB_URL = os.environ.get("DB_URL", "mongodb+srv://Omsai:Omsai@cluster0.7gjo7.mongodb.net/?retryWrites=true&w=majority")
 
     # default caption 
     DEF_CAP = os.environ.get("DEF_CAP", "<b><a href='https//:t.me/Rkn_Botz'>{file_name} Main Telegram Channel: @RknDeveloper</a></b>",
