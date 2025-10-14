@@ -71,7 +71,7 @@ async def start_cmd(bot, message):
             types.InlineKeyboardButton('Main Channel', url='https://t.me/wolverine273'),
             types.InlineKeyboardButton('Help Group', url='https://t.me/WOLVERIN_P')
             ],[
-            types.InlineKeyboardButton('♻️ADD ME YOUR CHANNEL♻️', url=f'https://t.me/{AUT0_CAPTION_bot}?startchannel=true')
+            types.InlineKeyboardButton('♻️ADD ME YOUR CHANNEL♻️', url=f'https://t.me/thinkfilmy')
     ]]))
     
 
