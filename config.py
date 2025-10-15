@@ -15,7 +15,7 @@ class Rkn_Bots(object):
     BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
     # start_pic
-    RKN_PIC = os.environ.get("RKN_PIC", "https://graph.org/file/1b03a1bd2cf8a79832705.jpg")
+    RKN_PIC = os.environ.get("RKN_PIC", "https://envs.sh/Nob.jpg")
 
     # wes response configuration
     BOT_UPTIME = time.time()
@@ -29,7 +29,7 @@ class Rkn_Bots(object):
     DB_URL = os.environ.get("DB_URL", "")
 
     # default caption 
-    DEF_CAP = os.environ.get("DEF_CAP", "<b><a href='https//:t.me/Rkn_Botz'>{file_name} Main Telegram Channel: @RknDeveloper</a></b>",
+    DEF_CAP = os.environ.get("DEF_CAP", "<b><a href='telegram.me/WOLVERIN_P'>{file_name} Telegram : @WOLVERIN_P\n\nForward the file before Downloading.</a></b>",
     )
 
     # sticker Id
@@ -43,6 +43,7 @@ class Rkn_Bots(object):
 # Don't Remove Credit 😔
 # Telegram Channel @RknDeveloper & @Rkn_Botz
 # Developer @RknDeveloperr
+
 
 
 
