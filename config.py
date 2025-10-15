@@ -22,7 +22,7 @@ class Rkn_Bots(object):
     PORT = int(os.environ.get("PORT", "8080"))
 
     # force subs channel ( required.. 😥)
-    FORCE_SUB = os.environ.get("FORCE_SUB", "Rkn_Botz") 
+    FORCE_SUB = os.environ.get("FORCE_SUB", "wolverine273") 
     
     # database config ( required.. 😥)
     DB_NAME = os.environ.get("DB_NAME", "AutoCaption_V05_Bot")     
@@ -43,3 +43,4 @@ class Rkn_Bots(object):
 # Don't Remove Credit 😔
 # Telegram Channel @RknDeveloper & @Rkn_Botz
 # Developer @RknDeveloperr
+
