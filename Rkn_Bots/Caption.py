@@ -1,8 +1,6 @@
 # (c) @RknDeveloperr
 # Rkn Developer 
 # Don't Remove Credit 😔
-# Telegram Channel @RknDeveloper & @Rkn_Bots
-# Developer @RknDeveloperr
 
 from pyrogram import Client, filters, errors, types
 from config import Rkn_Bots
@@ -12,7 +10,6 @@ from .database import addCap, updateCap, updateButtons, deleteButtons, getChanne
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from pyrogram.errors import FloodWait
 
-# ============ CHECK KAREN KE YE FUNCTION REGISTER HO RAHE HAIN ============
 print("🔄 Loading Caption.py...")
 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["rknusers"]))
@@ -59,7 +56,6 @@ async def broadcast(bot, message):
         await rkn.edit(f"<u>ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u>\n\n• ᴛᴏᴛᴀʟ ᴜsᴇʀs: {tot}\n• sᴜᴄᴄᴇssғᴜʟ: {success}\n• ʙʟᴏᴄᴋᴇᴅ ᴜsᴇʀs: {blocked}\n• ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛs: {deactivated}\n• ᴜɴsᴜᴄᴄᴇssғᴜʟ: {failed}")
         
 
-# Restart to cancell all process 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("restart"))
 async def restart_bot(b, m):
     rkn_msg = await b.send_message(text="**🔄 𝙿𝚁𝙾𝙲𝙴𝚂𝚂𝙴𝚂 𝚂𝚃𝙾𝙿𝙴𝙳. 𝙱𝙾𝚃 𝙸𝚂 𝚁𝙴𝚂𝚃𝙰𝚁𝚃𝙸𝙽𝙶...**", chat_id=m.chat.id)       
@@ -72,7 +68,7 @@ async def restart_bot(b, m):
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_cmd(bot, message):
-    print("✅ /start command triggered!")  # Debug log
+    print("✅ /start command triggered!")
     user_id = int(message.from_user.id)
     await insert(user_id)
     
@@ -99,7 +95,7 @@ async def start_cmd(bot, message):
 
 @Client.on_message(filters.private & filters.command("set_channel"))
 async def setChannel(bot, message):
-    print("✅ /set_channel command triggered!")  # Debug log
+    print("✅ /set_channel command triggered!")
     user_id = message.from_user.id
     
     if len(message.command) < 2:
@@ -140,10 +136,9 @@ async def setChannel(bot, message):
 
 @Client.on_message(filters.private & filters.command("set_buttons"))
 async def setButtons(bot, message):
-    print("✅ /set_buttons command triggered!")  # Debug log
+    print("✅ /set_buttons command triggered!")
     user_id = message.from_user.id
     
-    # Check if channel exists
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -152,7 +147,6 @@ async def setButtons(bot, message):
             "`/set_channel -1001234567890`"
         )
     
-    # Check if command has text
     if len(message.command) < 2:
         return await message.reply(
             "❌ **Please provide buttons!**\n\n"
@@ -164,7 +158,6 @@ async def setButtons(bot, message):
     if not buttons_text:
         return await message.reply("❌ Please provide buttons data!")
     
-    # Parse buttons
     buttons_data = []
     for btn in buttons_text.split("|"):
         btn = btn.strip()
@@ -184,10 +177,9 @@ async def setButtons(bot, message):
             "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
         )
     
-    # Save buttons
+    # Save buttons (converted to dict inside function)
     await updateButtonsByUser(user_id, buttons_data)
     
-    # Preview
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
     await message.reply(
@@ -202,14 +194,14 @@ async def setButtons(bot, message):
 
 @Client.on_message(filters.private & filters.command("view_buttons"))
 async def viewButtons(bot, message):
-    print("✅ /view_buttons command triggered!")  # Debug log
+    print("✅ /view_buttons command triggered!")
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData or "buttons" not in chkData or not chkData["buttons"]:
         return await message.reply("❌ No buttons set for your channel!")
     
-    buttons = chkData["buttons"]
+    buttons = chkData["buttons"]  # Already converted to InlineKeyboardButton list
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons])
     
     await message.reply(
@@ -223,7 +215,7 @@ async def viewButtons(bot, message):
 
 @Client.on_message(filters.private & filters.command("remove_buttons"))
 async def removeButtons(bot, message):
-    print("✅ /remove_buttons command triggered!")  # Debug log
+    print("✅ /remove_buttons command triggered!")
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
@@ -244,7 +236,7 @@ async def removeButtons(bot, message):
 
 @Client.on_message(filters.private & filters.command(["delcaption", "del_caption", "delete_caption"]))
 async def delCaption(bot, message):
-    print("✅ /delcaption command triggered!")  # Debug log
+    print("✅ /delcaption command triggered!")
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
@@ -262,7 +254,7 @@ async def delCaption(bot, message):
 
 @Client.on_message(filters.private & filters.command("set_caption"))
 async def setCaption(bot, message):
-    print("✅ /set_caption command triggered!")  # Debug log
+    print("✅ /set_caption command triggered!")
     user_id = message.from_user.id
     
     if len(message.command) < 2:
@@ -294,7 +286,7 @@ async def setCaption(bot, message):
 
 @Client.on_message(filters.private & filters.command("status"))
 async def status(bot, message):
-    print("✅ /status command triggered!")  # Debug log
+    print("✅ /status command triggered!")
     user_id = message.from_user.id
     chkData = await getChannelDataByUser(user_id)
     
@@ -325,8 +317,7 @@ async def status(bot, message):
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
-    
-    cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
+    cap_dets = await getChannelData(chnl_id)  # uses channel-based function
     
     if message.media:
         for file_type in ("video", "audio", "document", "voice"):
@@ -345,10 +336,8 @@ async def auto_edit_caption(bot, message):
                         replaced_caption = cap.format(file_name=file_name)
                         
                         if buttons:
-                            button_list = []
-                            for btn in buttons:
-                                button_list.append(btn)
-                            reply_markup = types.InlineKeyboardMarkup(button_list) if button_list else None
+                            # buttons is already list of InlineKeyboardButton lists
+                            reply_markup = types.InlineKeyboardMarkup(buttons)
                             await message.edit(replaced_caption, reply_markup=reply_markup)
                         else:
                             await message.edit(replaced_caption)
