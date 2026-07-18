@@ -41,7 +41,11 @@ async def updateCapByUser(user_id, caption):
 
 async def updateButtonsByUser(user_id, buttons):
     buttons_dict = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
-    await chnl_ids.update_one({"user_id": user_id}, {"$set": {"buttons": buttons_dict}})
+    doc = await chnl_ids.find_one({"user_id": user_id})
+    if doc:
+        await chnl_ids.update_one({"user_id": user_id}, {"$set": {"buttons": buttons_dict}})
+    else:
+        await chnl_ids.insert_one({"user_id": user_id, "buttons": buttons_dict})
 
 async def deleteButtonsByUser(user_id):
     await chnl_ids.update_one({"user_id": user_id}, {"$unset": {"buttons": ""}})
@@ -69,7 +73,11 @@ async def updateCap(chnl_id, caption, buttons=None):
 
 async def updateButtons(chnl_id, buttons):
     buttons_dict = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
-    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": {"buttons": buttons_dict}})
+    doc = await chnl_ids.find_one({"chnl_id": chnl_id})
+    if doc:
+        await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": {"buttons": buttons_dict}})
+    else:
+        await chnl_ids.insert_one({"chnl_id": chnl_id, "buttons": buttons_dict})
 
 async def getChannelData(chnl_id):
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
@@ -80,6 +88,16 @@ async def getChannelData(chnl_id):
 
 async def deleteButtons(chnl_id):
     await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
+
+# ============ RESET FUNCTIONS ============
+
+async def resetChannelData(chnl_id):
+    await chnl_ids.delete_many({"chnl_id": chnl_id})
+    print(f"✅ Reset data for channel: {chnl_id}")
+
+async def resetUserData(user_id):
+    await chnl_ids.delete_many({"user_id": user_id})
+    print(f"✅ Reset data for user: {user_id}")
 
 # Rkn Developer 
 # Don't Remove Credit 😔
