@@ -1,21 +1,20 @@
 {
     "name": "Rkn-AutoCaptionBot",
-    "description": "Telegram Channel Auto Caption Bot ",
+    "description": "Telegram Channel Auto Caption Bot with Log Channel Support",
     "logo": "https://telegra.ph/file/21a8e96b45cd6ac4d3da6.jpg",
-    "keywords": ["AutoCaptionBot", "Mongo DB"],    
+    "keywords": ["AutoCaptionBot", "Mongo DB", "Log Channel"],    
     "repository": "https://github.com/RknDeveloper/Rkn-AutoCaptionBot",
     "env": {
         "API_ID": {
-            "description": "Your APP ID From my.telegram.org ",
+            "description": "Your APP ID From my.telegram.org",
             "value": ""
         },
         "API_HASH": {
-            "description": "Your API Hash From my.telegram.org ",
+            "description": "Your API Hash From my.telegram.org",
             "value": ""
         },
-        
         "FORCE_SUB": {
-            "description": "Your force sub channel user name without [@] ",
+            "description": "Your force sub channel user name without [@]",
             "value": "",
             "required": false 
         },
@@ -24,20 +23,25 @@
             "value": ""
         },
         "ADMIN": {
-            "description":"Add Your User ID multiple is use space to split"
+            "description": "Add Your User ID multiple is use space to split",
+            "value": ""
         },
-        
         "DB_URL": {
             "description": "Your Mongo DB URL Obtained From mongodb.com",
             "value": ""
         },
-        "DB_NAME":{ 
-            "description":"Your Mongo DB Database Name ",
-            "value": "SnowPro_Users",
+        "DB_NAME": { 
+            "description": "Your Mongo DB Database Name",
+            "value": "AutoCaption_V05_Bot",
             "required": false
         },
         "START_PIC": {
             "description": "Your Bot start cmd Pic from @Rkn_TelegraPH_Bot",
+            "value": "",
+            "required": false
+        },
+        "LOG_CHANNEL": {
+            "description": "Your Log Channel ID (e.g., -1001234567890) - Bot must be admin here",
             "value": "",
             "required": false
         }
