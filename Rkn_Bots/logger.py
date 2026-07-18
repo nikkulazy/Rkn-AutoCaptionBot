@@ -15,7 +15,8 @@ class Logger:
         # Get log channel from config
         try:
             from config import Rkn_Bots
-            self.log_channel = Rkn_Bots.LOG_CHANNEL
+            # ✅ Channel ID ko string mein convert karein
+            self.log_channel = str(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
             self.enabled = bool(self.log_channel)
             print(f"📋 Logger initialized with channel: {self.log_channel}")
         except Exception as e:
@@ -30,9 +31,11 @@ class Logger:
             return
         
         try:
+            # ✅ Channel ID ko int mein convert karke bhejein
+            chat_id = int(self.log_channel)
             formatted_msg = f"📋 **LOG | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**\n\n{message}"
             await self.bot.send_message(
-                chat_id=self.log_channel,
+                chat_id=chat_id,
                 text=formatted_msg,
                 parse_mode=enums.ParseMode.HTML,
                 disable_web_page_preview=True
@@ -43,6 +46,7 @@ class Logger:
             self.enabled = False
         except PeerIdInvalid:
             print(f"❌ Invalid log channel ID: {self.log_channel}")
+            print(f"⚠️ Make sure channel ID starts with -100")
             self.enabled = False
         except FloodWait as e:
             print(f"⏳ FloodWait: {e.x} seconds")
@@ -64,7 +68,7 @@ class Logger:
                 f"• **Bot ID:** `{me.id}`\n"
                 f"• **API ID:** `{Rkn_Bots.API_ID}`\n"
                 f"• **Force Sub:** {Rkn_Bots.FORCE_SUB or 'Disabled'}\n"
-                f"• **Log Channel:** {Rkn_Bots.LOG_CHANNEL or 'Disabled'}\n"
+                f"• **Log Channel:** `{Rkn_Bots.LOG_CHANNEL}`\n"
                 f"• **Admins:** `{Rkn_Bots.ADMIN}`\n"
                 f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             )
