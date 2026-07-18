@@ -29,8 +29,6 @@ async def main_menu_buttons():
     ])
     return buttons
 
-# ==================== CAPTION PAGE BUTTONS ====================
-
 async def caption_page_buttons():
     """Caption page with Delete Caption and Back buttons"""
     buttons = types.InlineKeyboardMarkup([
@@ -39,8 +37,6 @@ async def caption_page_buttons():
     ])
     return buttons
 
-# ==================== BUTTON PAGE BUTTONS ====================
-
 async def button_page_buttons():
     """Button page with Remove Button and Back buttons"""
     buttons = types.InlineKeyboardMarkup([
@@ -48,8 +44,6 @@ async def button_page_buttons():
         [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
     ])
     return buttons
-
-# ==================== BACK BUTTON ONLY ====================
 
 async def back_button_only():
     """Only back button"""
@@ -150,7 +144,8 @@ async def callback_handler(bot, callback_query):
         await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
         await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
         
-        buttons = await caption_page_buttons()
+        # Sirf Back Button - Delete Caption Button Hataya
+        buttons = await back_button_only()
         await callback_query.message.edit_caption(
             caption=f"✅ **Caption Deleted Successfully!**\n\n"
             f"Now using default caption.\n\n"
@@ -233,7 +228,8 @@ async def callback_handler(bot, callback_query):
         await deleteButtonsByUser(user_id)
         await deleteButtons(chnl_id)
         
-        buttons = await button_page_buttons()
+        # Sirf Back Button - Remove Button Hataya
+        buttons = await back_button_only()
         await callback_query.message.edit_caption(
             caption=f"✅ **Button Removed Successfully!**\n\n"
             f"Now no buttons will be shown with captions.\n\n"
@@ -421,7 +417,7 @@ async def delCaption(bot, message):
     await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
     await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
     
-    buttons = await caption_page_buttons()
+    buttons = await back_button_only()
     await message.reply(
         "✅ **Caption Deleted Successfully!**\n"
         f"Now I will use default caption.",
@@ -450,7 +446,7 @@ async def removeButtons(bot, message):
     await deleteButtonsByUser(user_id)
     await deleteButtons(chnl_id)
     
-    buttons = await button_page_buttons()
+    buttons = await back_button_only()
     await message.reply(
         "✅ **Buttons Removed Successfully!**\n"
         "Now no buttons will be shown with captions.",
