@@ -62,15 +62,8 @@ class Logger:
             from config import Rkn_Bots
             
             msg = (
-                f"🚀 **Bot Started Successfully!**\n\n"
-                f"• **Bot Name:** {me.first_name}\n"
-                f"• **Bot Username:** @{me.username}\n"
-                f"• **Bot ID:** `{me.id}`\n"
-                f"• **API ID:** `{Rkn_Bots.API_ID}`\n"
-                f"• **Force Sub:** {Rkn_Bots.FORCE_SUB or 'Disabled'}\n"
-                f"• **Log Channel:** `{Rkn_Bots.LOG_CHANNEL}`\n"
-                f"• **Admins:** `{Rkn_Bots.ADMIN}`\n"
-                f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                f"Bot Started Successfully! 🚀\n\n"
+                f"Bot Name {me.first_name}\n"
             )
             await self.send_log(msg)
             print("✅ Bot started log sent successfully!")
@@ -93,11 +86,11 @@ class Logger:
         full_name = f"{first_name or ''} {last_name or ''}".strip() or "Unknown"
         
         msg = (
-            f"👤 **New User Started Bot**\n\n"
-            f"• **User ID:** `{user_id}`\n"
-            f"• **Name:** {full_name}\n"
-            f"• **Username:** {username_str}\n"
-            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            f"New User Started Bot\n\n"
+            f"User id `{user_id}`\n"
+            f"Name {full_name}\n"
+            f"Username {username_str}\n"
+            f"Time {datetime.now().strftime('%H:%M:%S')}"
         )
         await self.send_log(msg)
     
@@ -115,10 +108,10 @@ class Logger:
     async def channel_removed(self, user_id: int, channel_id: int):
         """🗑️ Log channel removed"""
         msg = (
-            f"🗑️ **Channel Removed**\n\n"
-            f"• **User ID:** `{user_id}`\n"
-            f"• **Channel ID:** `{channel_id}`\n"
-            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            f"🗑️Channel Removed\n\n"
+            f"User ID `{user_id}`\n"
+            f"Channel ID `{channel_id}`\n"
+            f"Time {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
         await self.send_log(msg)
     
