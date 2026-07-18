@@ -78,13 +78,16 @@ async def start_cmd(bot, message):
     await insert(user_id)
     
     # ==================== ADD LOG ====================
-    logger = Logger(bot)
-    await logger.user_start(
-        user_id=user_id,
-        username=message.from_user.username,
-        first_name=message.from_user.first_name,
-        last_name=message.from_user.last_name
-    )
+    try:
+        logger = Logger(bot)
+        await logger.user_start(
+            user_id=user_id,
+            username=message.from_user.username,
+            first_name=message.from_user.first_name,
+            last_name=message.from_user.last_name
+        )
+    except Exception as e:
+        print(f"⚠️ Log error (non-critical): {e}")
     # =================================================
     
     buttons = await main_menu_buttons()
@@ -104,8 +107,17 @@ async def callback_handler(bot, callback_query):
     data = callback_query.data
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
+    
+    # ✅ CHECK IF MESSAGE EXISTS
+    if not callback_query.message:
+        await callback_query.answer("Message not found!")
+        return
     
     # ✅ OLD MESSAGE DELETE KARO
     try:
@@ -118,11 +130,17 @@ async def callback_handler(bot, callback_query):
         buttons = await main_menu_buttons()
         caption = await get_home_caption(user_id)
         
-        await callback_query.message.reply_photo(
-            photo=Rkn_Bots.RKN_PIC,
-            caption=caption,
-            reply_markup=buttons
-        )
+        try:
+            await callback_query.message.reply_photo(
+                photo=Rkn_Bots.RKN_PIC,
+                caption=caption,
+                reply_markup=buttons
+            )
+        except Exception as e:
+            await callback_query.message.reply_text(
+                caption,
+                reply_markup=buttons
+            )
         await callback_query.answer()
         return
     
@@ -179,7 +197,11 @@ async def callback_handler(bot, callback_query):
         await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
         
         # ==================== ADD LOG ====================
-        await logger.caption_deleted(user_id, chnl_id)
+        if logger:
+            try:
+                await logger.caption_deleted(user_id, chnl_id)
+            except Exception as e:
+                print(f"⚠️ Log error: {e}")
         # =================================================
         
         buttons = await back_button_only()
@@ -263,7 +285,11 @@ async def callback_handler(bot, callback_query):
         await deleteButtons(chnl_id)
         
         # ==================== ADD LOG ====================
-        await logger.buttons_removed(user_id, chnl_id)
+        if logger:
+            try:
+                await logger.buttons_removed(user_id, chnl_id)
+            except Exception as e:
+                print(f"⚠️ Log error: {e}")
         # =================================================
         
         buttons = await back_button_only()
@@ -317,7 +343,11 @@ async def callback_handler(bot, callback_query):
             await chnl_ids.delete_many({"chnl_id": chnl_id})
             
             # ==================== ADD LOG ====================
-            await logger.channel_removed(user_id, chnl_id)
+            if logger:
+                try:
+                    await logger.channel_removed(user_id, chnl_id)
+                except Exception as e:
+                    print(f"⚠️ Log error: {e}")
             # =================================================
             
             print(f"✅ Channel {chnl_id} removed for user {user_id}")
@@ -325,13 +355,21 @@ async def callback_handler(bot, callback_query):
         buttons = await main_menu_buttons()
         caption = await get_home_caption(user_id)
         
-        await callback_query.message.reply_photo(
-            photo=Rkn_Bots.RKN_PIC,
-            caption=f"✅ **Channel Removed Successfully!**\n\n"
-            f"Your channel has been removed.\n\n"
-            f"{caption}",
-            reply_markup=buttons
-        )
+        try:
+            await callback_query.message.reply_photo(
+                photo=Rkn_Bots.RKN_PIC,
+                caption=f"✅ **Channel Removed Successfully!**\n\n"
+                f"Your channel has been removed.\n\n"
+                f"{caption}",
+                reply_markup=buttons
+            )
+        except Exception as e:
+            await callback_query.message.reply_text(
+                f"✅ **Channel Removed Successfully!**\n\n"
+                f"Your channel has been removed.\n\n"
+                f"{caption}",
+                reply_markup=buttons
+            )
         await callback_query.answer()
     
     # ========== STATUS ==========
@@ -376,7 +414,11 @@ async def remove_channel_cmd(bot, message):
     user_id = message.from_user.id
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     try:
@@ -403,7 +445,11 @@ async def remove_channel_cmd(bot, message):
     await chnl_ids.delete_many({"chnl_id": chnl_id})
     
     # ==================== ADD LOG ====================
-    await logger.channel_removed(user_id, chnl_id)
+    if logger:
+        try:
+            await logger.channel_removed(user_id, chnl_id)
+        except Exception as e:
+            print(f"⚠️ Log error: {e}")
     # =================================================
     
     print(f"✅ Channel {chnl_id} removed for user {user_id}")
@@ -428,7 +474,11 @@ async def setChannel(bot, message):
     user_id = message.from_user.id
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     try:
@@ -473,7 +523,11 @@ async def setChannel(bot, message):
     await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     # ==================== ADD LOG ====================
-    await logger.channel_setup(user_id, channel_id, channel_title)
+    if logger:
+        try:
+            await logger.channel_setup(user_id, channel_id, channel_title)
+        except Exception as e:
+            print(f"⚠️ Log error: {e}")
     # =================================================
     
     buttons = await main_menu_buttons()
@@ -493,7 +547,11 @@ async def setCaption(bot, message):
     user_id = message.from_user.id
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     try:
@@ -521,7 +579,11 @@ async def setCaption(bot, message):
         await updateCap(chnl_id, caption)
         
         # ==================== ADD LOG ====================
-        await logger.caption_set(user_id, chnl_id, caption)
+        if logger:
+            try:
+                await logger.caption_set(user_id, chnl_id, caption)
+            except Exception as e:
+                print(f"⚠️ Log error: {e}")
         # =================================================
         
         buttons = await caption_page_buttons()
@@ -547,7 +609,11 @@ async def setButtons(bot, message):
     user_id = message.from_user.id
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     try:
@@ -611,7 +677,11 @@ async def setButtons(bot, message):
     await updateButtonsByUser(user_id, buttons_data)
     
     # ==================== ADD LOG ====================
-    await logger.buttons_set(user_id, chnl_id, len(buttons_data))
+    if logger:
+        try:
+            await logger.buttons_set(user_id, chnl_id, len(buttons_data))
+        except Exception as e:
+            print(f"⚠️ Log error: {e}")
     # =================================================
     
     verify_data = await getChannelData(chnl_id)
@@ -638,7 +708,11 @@ async def delCaption(bot, message):
     user_id = message.from_user.id
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     try:
@@ -656,7 +730,11 @@ async def delCaption(bot, message):
     await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
     
     # ==================== ADD LOG ====================
-    await logger.caption_deleted(user_id, chnl_id)
+    if logger:
+        try:
+            await logger.caption_deleted(user_id, chnl_id)
+        except Exception as e:
+            print(f"⚠️ Log error: {e}")
     # =================================================
     
     buttons = await back_button_only()
@@ -674,7 +752,11 @@ async def removeButtons(bot, message):
     user_id = message.from_user.id
     
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     try:
@@ -698,7 +780,11 @@ async def removeButtons(bot, message):
     await deleteButtons(chnl_id)
     
     # ==================== ADD LOG ====================
-    await logger.buttons_removed(user_id, chnl_id)
+    if logger:
+        try:
+            await logger.buttons_removed(user_id, chnl_id)
+        except Exception as e:
+            print(f"⚠️ Log error: {e}")
     # =================================================
     
     buttons = await back_button_only()
@@ -827,8 +913,11 @@ async def auto_edit_caption(bot, message):
                         print(f"📝 New caption: {replaced_caption}")
                         
                         # ==================== ADD LOG ====================
-                        logger = Logger(bot)
-                        await logger.caption_edited(chnl_id, message.id, file_name)
+                        try:
+                            logger = Logger(bot)
+                            await logger.caption_edited(chnl_id, message.id, file_name)
+                        except Exception as e:
+                            print(f"⚠️ Log error: {e}")
                         # =================================================
                         
                         if buttons and len(buttons) > 0:
@@ -872,7 +961,11 @@ async def all_db_users_here(client, message):
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["broadcast"]))
 async def broadcast(bot, message):
     # ==================== ADD LOGGER ====================
-    logger = Logger(bot)
+    try:
+        logger = Logger(bot)
+    except Exception as e:
+        print(f"⚠️ Logger error: {e}")
+        logger = None
     # ===================================================
     
     if (message.reply_to_message):
@@ -885,7 +978,11 @@ async def broadcast(bot, message):
         blocked = 0
         
         # ==================== ADD LOG ====================
-        await logger.broadcast_started(message.from_user.id, tot)
+        if logger:
+            try:
+                await logger.broadcast_started(message.from_user.id, tot)
+            except Exception as e:
+                print(f"⚠️ Log error: {e}")
         # =================================================
         
         await rkn.edit(f"bot ʙʀᴏᴀᴅᴄᴀsᴛɪɴɢ started...")
@@ -910,7 +1007,11 @@ async def broadcast(bot, message):
                 await asyncio.sleep(e.x)
         
         # ==================== ADD LOG ====================
-        await logger.broadcast_completed(message.from_user.id, success, failed, blocked, deactivated, tot)
+        if logger:
+            try:
+                await logger.broadcast_completed(message.from_user.id, success, failed, blocked, deactivated, tot)
+            except Exception as e:
+                print(f"⚠️ Log error: {e}")
         # =================================================
         
         await rkn.edit(f"<u>ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u>\n\n• ᴛᴏᴛᴀʟ ᴜsᴇʀs: {tot}\n• sᴜᴄᴄᴇssғᴜʟ: {success}\n• ʙʟᴏᴄᴋᴇᴅ ᴜsᴇʀs: {blocked}\n• ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛs: {deactivated}\n• ᴜɴsᴜᴄᴄᴇssғᴜʟ: {failed}")
