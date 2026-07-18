@@ -99,6 +99,50 @@ async def start_cmd(bot, message):
     )
 
 
+# ==================== SET CHANNEL (BOT ME) ====================
+
+@Client.on_message(filters.private & filters.command("set_channel"))
+async def setChannel(bot, message):
+    user_id = message.from_user.id
+    
+    if len(message.command) < 2:
+        return await message.reply(
+            "❌ **Please provide channel ID!**\n\n"
+            "**Usage:**\n"
+            "`/set_channel -1001234567890`\n\n"
+            "**How to get channel ID:**\n"
+            "1. Add @MissRose_bot to your channel\n"
+            "2. Send /id in channel\n"
+            "3. Copy the channel ID"
+        )
+    
+    channel_id = message.text.split(" ", 1)[1]
+    
+    try:
+        channel_id = int(channel_id)
+    except:
+        return await message.reply("❌ Invalid channel ID! Must be a number.")
+    
+    chkData = await getChannelDataByUser(user_id)
+    
+    if chkData:
+        await chnl_ids.update_one({"user_id": user_id}, {"$set": {"chnl_id": channel_id}})
+    else:
+        await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+    
+    await message.reply(
+        f"✅ **Channel Set Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n\n"
+        f"Now you can use:\n"
+        f"• `/set_caption` - Set caption\n"
+        f"• `/set_buttons` - Set buttons\n"
+        f"• `/delcaption` - Delete caption\n"
+        f"• `/remove_buttons` - Remove buttons\n"
+        f"• `/view_buttons` - View buttons\n"
+        f"• `/status` - View current settings"
+    )
+
+
 # ==================== SET CAPTION (BOT ME) ====================
 
 @Client.on_message(filters.private & filters.command("set_caption"))
@@ -135,68 +179,86 @@ async def setCaption(bot, message):
         )
 
 
-# ==================== SET BUTTONS (BOT ME) ====================
+# ==================== SET BUTTONS (BOT ME) - DEBUG VERSION ====================
 
 @Client.on_message(filters.private & filters.command("set_buttons"))
 async def setButtons(bot, message):
     user_id = message.from_user.id
     
-    if len(message.command) < 2:
-        return await message.reply(
-            "❌ **Please provide buttons!**\n\n"
-            "**Usage:**\n"
-            "`/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
-            "**Examples:**\n\n"
-            "🔹 **Single Button:**\n"
-            "`/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
-            "🔹 **Multiple Buttons:**\n"
-            "`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P | 🎬 Movies:https://t.me/thinkfilmy`\n\n"
-            "⚠️ Use `|` to separate multiple buttons\n"
-            "⚠️ URL must start with https:// or http://"
+    try:
+        # Step 1: Check if channel exists
+        chkData = await getChannelDataByUser(user_id)
+        if not chkData:
+            return await message.reply(
+                "❌ **No channel found!**\n\n"
+                "Please set your channel ID first:\n"
+                "`/set_channel -1001234567890`"
+            )
+        
+        # Step 2: Check if command has text
+        if len(message.command) < 2:
+            return await message.reply(
+                "❌ **Please provide buttons!**\n\n"
+                "**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
+                "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
+            )
+        
+        buttons_text = message.text.split(" ", 1)[1]
+        if not buttons_text:
+            return await message.reply("❌ Please provide buttons data!")
+        
+        # Step 3: Parse buttons
+        buttons_data = []
+        parsed_count = 0
+        invalid_urls = []
+        
+        for btn in buttons_text.split("|"):
+            btn = btn.strip()
+            if ":" in btn:
+                parts = btn.split(":", 1)
+                if len(parts) == 2:
+                    text = parts[0].strip()
+                    url = parts[1].strip()
+                    if text and url:
+                        if url.startswith(("https://", "http://", "t.me/")):
+                            buttons_data.append([types.InlineKeyboardButton(text, url=url)])
+                            parsed_count += 1
+                        else:
+                            invalid_urls.append(url)
+        
+        # Step 4: Check if any valid buttons found
+        if not buttons_data:
+            invalid_msg = ""
+            if invalid_urls:
+                invalid_msg = f"\n\n**Invalid URLs:** `{', '.join(invalid_urls)}`"
+            return await message.reply(
+                f"❌ **No valid buttons parsed!**{invalid_msg}\n\n"
+                f"**Raw Input:** `{buttons_text}`\n\n"
+                f"**Format:** `[Text]:[URL]` separated by ` | `\n"
+                f"**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
+            )
+        
+        # Step 5: Update database
+        await updateButtonsByUser(user_id, buttons_data)
+        
+        # Step 6: Verify by fetching again
+        updated_data = await getChannelDataByUser(user_id)
+        saved_buttons = updated_data.get("buttons", [])
+        
+        preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in saved_buttons])
+        
+        await message.reply(
+            f"✅ **Buttons Set Successfully!**\n\n"
+            f"📌 **Channel ID:** `{chkData.get('chnl_id')}`\n"
+            f"🔢 **Parsed:** `{parsed_count}` button(s)\n"
+            f"💾 **Saved:** `{len(saved_buttons)}` button(s)\n\n"
+            f"**Your Buttons:**\n{preview}\n\n"
+            f"📌 Use `/view_buttons` to see them again.",
+            reply_markup=types.InlineKeyboardMarkup(saved_buttons)
         )
-    
-    chkData = await getChannelDataByUser(user_id)
-    if not chkData:
-        return await message.reply(
-            "❌ **No channel found!**\n\n"
-            "Please set your channel ID first:\n"
-            "`/set_channel -1001234567890`\n\n"
-            "Get your channel ID from @MissRose_bot"
-        )
-    
-    buttons_text = message.text.split(" ", 1)[1]
-    
-    if not buttons_text:
-        return await message.reply("❌ Please provide buttons data!")
-    
-    buttons_data = []
-    for btn in buttons_text.split("|"):
-        btn = btn.strip()
-        if ":" in btn:
-            parts = btn.split(":", 1)
-            if len(parts) == 2:
-                text = parts[0].strip()
-                url = parts[1].strip()
-                if text and url:
-                    if url.startswith(("https://", "http://", "t.me/")):
-                        buttons_data.append([types.InlineKeyboardButton(text, url=url)])
-                    else:
-                        return await message.reply(f"❌ Invalid URL: `{url}`\nURL must start with https://, http://, or t.me/")
-    
-    if not buttons_data:
-        return await message.reply("❌ No valid buttons found!\n\nFormat: `[text]:[url] | [text]:[url]`")
-    
-    await updateButtonsByUser(user_id, buttons_data)
-    
-    preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
-    
-    await message.reply(
-        f"✅ **Buttons Set Successfully!**\n\n"
-        f"**Your Buttons:**\n{preview}\n\n"
-        f"**Total Buttons:** `{len(buttons_data)}`\n\n"
-        f"📌 These buttons will appear with every caption in your channel.",
-        reply_markup=types.InlineKeyboardMarkup(buttons_data)
-    )
+        
+    except Exception as e:
+        await message.reply(f"❌ **Error:** `{str(e)}`")
 
 
 # ==================== REMOVE BUTTONS (BOT ME) ====================
@@ -256,46 +318,33 @@ async def delCaption(bot, message):
     )
 
 
-# ==================== SET CHANNEL (BOT ME) ====================
+# ==================== STATUS COMMAND ====================
 
-@Client.on_message(filters.private & filters.command("set_channel"))
-async def setChannel(bot, message):
+@Client.on_message(filters.private & filters.command("status"))
+async def status(bot, message):
     user_id = message.from_user.id
-    
-    if len(message.command) < 2:
-        return await message.reply(
-            "❌ **Please provide channel ID!**\n\n"
-            "**Usage:**\n"
-            "`/set_channel -1001234567890`\n\n"
-            "**How to get channel ID:**\n"
-            "1. Add @MissRose_bot to your channel\n"
-            "2. Send /id in channel\n"
-            "3. Copy the channel ID"
-        )
-    
-    channel_id = message.text.split(" ", 1)[1]
-    
-    try:
-        channel_id = int(channel_id)
-    except:
-        return await message.reply("❌ Invalid channel ID! Must be a number.")
-    
     chkData = await getChannelDataByUser(user_id)
     
-    if chkData:
-        await chnl_ids.update_one({"user_id": user_id}, {"$set": {"chnl_id": channel_id}})
-    else:
-        await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+    if not chkData:
+        return await message.reply(
+            "❌ **No settings found!**\n\n"
+            "Please set your channel first:\n"
+            "`/set_channel -1001234567890`"
+        )
+    
+    channel_id = chkData.get("chnl_id", "Not set")
+    caption = chkData.get("caption", "Not set")
+    buttons = chkData.get("buttons", [])
+    
+    btn_count = len(buttons)
+    btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons]) if buttons else "No buttons set"
     
     await message.reply(
-        f"✅ **Channel Set Successfully!**\n\n"
-        f"**Channel ID:** `{channel_id}`\n\n"
-        f"Now you can use:\n"
-        f"• `/set_caption` - Set caption\n"
-        f"• `/set_buttons` - Set buttons\n"
-        f"• `/delcaption` - Delete caption\n"
-        f"• `/remove_buttons` - Remove buttons\n"
-        f"• `/view_buttons` - View buttons"
+        f"**📊 Your Settings**\n\n"
+        f"🔹 **Channel ID:** `{channel_id}`\n"
+        f"🔹 **Caption:**\n`{caption}`\n\n"
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}\n\n"
+        f"📌 Use `/view_buttons` to see buttons with clickable preview."
     )
 
 
@@ -371,19 +420,28 @@ async def callback_handler(bot, callback_query):
         await callback_query.answer()
     
     elif data == "status_check":
-        total_users = await total_user()
-        uptime = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - bot.uptime))
-        start_t = time.time()
-        end_t = time.time()
-        ping = (end_t - start_t) * 1000
+        user_id = callback_query.from_user.id
+        chkData = await getChannelDataByUser(user_id)
+        if not chkData:
+            await callback_query.message.edit(
+                "❌ No settings found. Use /set_channel to set your channel.",
+                reply_markup=types.InlineKeyboardMarkup([
+                    [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
+                ])
+            )
+            await callback_query.answer()
+            return
+        
+        channel_id = chkData.get("chnl_id", "Not set")
+        caption = chkData.get("caption", "Not set")
+        buttons = chkData.get("buttons", [])
+        btn_count = len(buttons)
         
         await callback_query.message.edit(
-            f"**📊 Bot Status**\n\n"
-            f"🟢 **Status:** Online\n"
-            f"⏱️ **Uptime:** {uptime}\n"
-            f"📡 **Ping:** `{ping:.2f}ms`\n"
-            f"👥 **Total Users:** `{total_users}`\n\n"
-            f"🤖 **Bot:** @{bot.me.username}",
+            f"**📊 Your Settings**\n\n"
+            f"🔹 **Channel ID:** `{channel_id}`\n"
+            f"🔹 **Caption:**\n`{caption}`\n\n"
+            f"🔹 **Buttons:** {btn_count} button(s)",
             reply_markup=types.InlineKeyboardMarkup([
                 [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
             ])
