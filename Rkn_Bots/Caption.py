@@ -64,7 +64,7 @@ async def restart_bot(b, m):
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-# ==================== START COMMAND ====================
+# ==================== START COMMAND (FIXED) ====================
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_cmd(bot, message):
@@ -76,7 +76,7 @@ async def start_cmd(bot, message):
         photo=Rkn_Bots.RKN_PIC,
         caption=f"<b>Hey, {message.from_user.mention}\n\nI'm an auto-caption bot.\n\nUse these commands in bot (private):</b>\n\n"
         f"📌 `/set_channel -1001234567890` - Set channel ID\n"
-        f"📝 `/set_caption Your caption {file_name}` - Set caption\n"
+        f"📝 `/set_caption Your caption here` - Set caption (use {{file_name}} for filename)\n"
         f"📎 `/set_buttons [Text]:[URL] | [Text]:[URL]` - Set buttons\n"
         f"👁️ `/view_buttons` - View buttons\n"
         f"🗑️ `/remove_buttons` - Remove buttons\n"
@@ -177,7 +177,6 @@ async def setButtons(bot, message):
             "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
         )
     
-    # Save buttons (converted to dict inside function)
     await updateButtonsByUser(user_id, buttons_data)
     
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
@@ -201,7 +200,7 @@ async def viewButtons(bot, message):
     if not chkData or "buttons" not in chkData or not chkData["buttons"]:
         return await message.reply("❌ No buttons set for your channel!")
     
-    buttons = chkData["buttons"]  # Already converted to InlineKeyboardButton list
+    buttons = chkData["buttons"]
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons])
     
     await message.reply(
@@ -261,7 +260,8 @@ async def setCaption(bot, message):
         return await message.reply(
             "❌ **Please provide caption!**\n\n"
             "**Usage:** `/set_caption Your caption here {file_name}`\n\n"
-            "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`"
+            "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
+            "**{file_name}** - Shows original file name"
         )
     
     caption = message.text.split(" ", 1)[1]
@@ -312,12 +312,12 @@ async def status(bot, message):
     )
 
 
-# ==================== AUTO EDIT CAPTION (CHANNEL) ====================
+# ==================== AUTO EDIT CAPTION (CHANNEL) - FIXED ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
-    cap_dets = await getChannelData(chnl_id)  # uses channel-based function
+    cap_dets = await getChannelData(chnl_id)
     
     if message.media:
         for file_type in ("video", "audio", "document", "voice"):
@@ -336,19 +336,33 @@ async def auto_edit_caption(bot, message):
                         replaced_caption = cap.format(file_name=file_name)
                         
                         if buttons:
-                            # buttons is already list of InlineKeyboardButton lists
                             reply_markup = types.InlineKeyboardMarkup(buttons)
-                            await message.edit(replaced_caption, reply_markup=reply_markup)
+                            # Check if caption already has same content
+                            if message.caption != replaced_caption or message.reply_markup != reply_markup:
+                                await message.edit(replaced_caption, reply_markup=reply_markup)
+                            else:
+                                # Skip if same content
+                                pass
                         else:
-                            await message.edit(replaced_caption)
+                            if message.caption != replaced_caption:
+                                await message.edit(replaced_caption)
+                            else:
+                                # Skip if same caption
+                                pass
                     else:
                         replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name)
-                        await message.edit(replaced_caption)
+                        if message.caption != replaced_caption:
+                            await message.edit(replaced_caption)
+                        else:
+                            # Skip if same caption
+                            pass
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
                     continue
                 except Exception as e:
-                    print(f"Error in auto_edit_caption: {e}")
+                    # Ignore MESSAGE_NOT_MODIFIED error
+                    if "MESSAGE_NOT_MODIFIED" not in str(e):
+                        print(f"Error in auto_edit_caption: {e}")
                     continue
     return
 
