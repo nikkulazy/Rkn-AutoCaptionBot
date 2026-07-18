@@ -1,7 +1,3 @@
-# (c) @RknDeveloperr
-# Rkn Developer 
-# Don't Remove Credit 😔
-
 import motor.motor_asyncio
 from config import Rkn_Bots
 
@@ -98,6 +94,3 @@ async def resetChannelData(chnl_id):
 async def resetUserData(user_id):
     await chnl_ids.delete_many({"user_id": user_id})
     print(f"✅ Reset data for user: {user_id}")
-
-# Rkn Developer 
-# Don't Remove Credit 😔
