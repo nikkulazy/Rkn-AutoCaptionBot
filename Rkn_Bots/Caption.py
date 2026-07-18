@@ -127,7 +127,7 @@ async def setChannel(bot, message):
     except:
         return await message.reply("❌ Invalid channel ID! Must be a number.")
     
-    # Reset existing data first
+    # Reset existing data for this channel
     await resetChannelData(channel_id)
     await resetUserData(user_id)
     
@@ -230,26 +230,26 @@ async def setButtons(bot, message):
         )
     
     chnl_id = chkData.get("chnl_id")
-    print(f"📌 Channel ID: {chnl_id}")
-    print(f"📌 Buttons to save: {buttons_data}")
+    print(f"📌 Setting buttons for Channel: {chnl_id}")
+    print(f"📌 Buttons: {len(buttons_data)} button(s)")
     
-    # Save buttons - BOTH ways
-    await updateButtonsByUser(user_id, buttons_data)
+    # Save buttons for this channel
     await updateButtons(chnl_id, buttons_data)
+    await updateButtonsByUser(user_id, buttons_data)
     
     # Verify save
     verify_data = await getChannelData(chnl_id)
     saved_buttons = verify_data.get("buttons", [])
-    print(f"✅ Verification: {len(saved_buttons)} buttons saved")
+    print(f"✅ Verified: {len(saved_buttons)} buttons saved for channel {chnl_id}")
     
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
     await message.reply(
         f"✅ **Buttons Set Successfully!**\n\n"
+        f"📌 **Channel ID:** `{chnl_id}`\n"
+        f"🔢 **Buttons Saved:** `{len(saved_buttons)}` button(s)\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
-        f"**Total:** `{len(buttons_data)}` button(s)\n"
-        f"**Verified in DB:** `{len(saved_buttons)}` button(s)\n\n"
-        f"📌 Now post a file in your channel to see buttons!",
+        f"📌 Now post a file in this channel to see buttons!",
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
 
@@ -262,14 +262,22 @@ async def viewButtons(bot, message):
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
-    if not chkData or "buttons" not in chkData or not chkData["buttons"]:
+    if not chkData:
+        return await message.reply("❌ No channel found! Please set channel first.")
+    
+    chnl_id = chkData.get("chnl_id")
+    channel_data = await getChannelData(chnl_id)
+    
+    if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
         return await message.reply("❌ No buttons set for your channel!")
     
-    buttons = chkData["buttons"]
+    buttons = channel_data["buttons"]
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons])
     
     await message.reply(
-        f"**📎 Your Current Buttons:**\n\n{preview}\n\n"
+        f"**📎 Your Current Buttons:**\n\n"
+        f"📌 **Channel ID:** `{chnl_id}`\n\n"
+        f"{preview}\n\n"
         f"**Total Buttons:** `{len(buttons)}`",
         reply_markup=types.InlineKeyboardMarkup(buttons)
     )
@@ -286,10 +294,12 @@ async def removeButtons(bot, message):
     if not chkData:
         return await message.reply("❌ No data found for your channel!")
     
-    if "buttons" not in chkData or not chkData["buttons"]:
+    chnl_id = chkData.get("chnl_id")
+    channel_data = await getChannelData(chnl_id)
+    
+    if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
         return await message.reply("❌ No buttons are currently set!")
     
-    chnl_id = chkData.get("chnl_id")
     await deleteButtonsByUser(user_id)
     await deleteButtons(chnl_id)
     
@@ -336,8 +346,10 @@ async def status(bot, message):
         )
     
     channel_id = chkData.get("chnl_id", "Not set")
-    caption = chkData.get("caption", "Not set")
-    buttons = chkData.get("buttons", [])
+    channel_data = await getChannelData(channel_id)
+    
+    caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
+    buttons = channel_data.get("buttons", []) if channel_data else []
     
     btn_count = len(buttons)
     btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons]) if buttons else "No buttons set"
@@ -346,7 +358,8 @@ async def status(bot, message):
         f"**📊 Your Settings**\n\n"
         f"🔹 **Channel ID:** `{channel_id}`\n"
         f"🔹 **Caption:**\n`{caption}`\n\n"
-        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}"
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}\n\n"
+        f"📌 To set buttons: `/set_buttons [Text]:[URL]`"
     )
 
 
