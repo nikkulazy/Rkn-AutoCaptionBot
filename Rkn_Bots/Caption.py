@@ -52,6 +52,24 @@ async def back_button_only():
     ])
     return buttons
 
+# ==================== GET HOME MENU CAPTION ====================
+
+async def get_home_caption(user_id):
+    """Get home menu caption with channel status"""
+    chkData = await getChannelDataByUser(user_id)
+    
+    if chkData:
+        channel_id = chkData.get("chnl_id", "Not set")
+        channel_status = f"✅ **Channel ID:** `{channel_id}`"
+    else:
+        channel_status = "❌ **Channel ID:** `Not saved yet!`\n\n📌 Please set your channel first:\n`/set_channel -1001234567890`"
+    
+    caption = f"<b>🏠 Main Menu</b>\n\n"
+    caption += f"{channel_status}\n\n"
+    caption += f"<i>Select an option below to manage your settings:</i>"
+    
+    return caption
+
 # ==================== START COMMAND ====================
 
 @Client.on_message(filters.command("start") & filters.private)
@@ -61,14 +79,11 @@ async def start_cmd(bot, message):
     await insert(user_id)
     
     buttons = await main_menu_buttons()
+    caption = await get_home_caption(user_id)
     
-    # ✅ SIRF HOME MENU PAR PHOTO
     await message.reply_photo(
         photo=Rkn_Bots.RKN_PIC,
-        caption=f"<b>Hey, {message.from_user.mention}\n\nWelcome to Auto Caption Bot! 🎯</b>\n\n"
-        f"<i>Select an option below to manage your settings:</i>\n\n"
-        f"📌 <b>First set your channel:</b>\n"
-        f"`/set_channel -1001234567890`",
+        caption=caption,
         reply_markup=buttons
     )
 
@@ -88,14 +103,12 @@ async def callback_handler(bot, callback_query):
     # ========== BACK TO MENU ==========
     if data == "back_to_menu":
         buttons = await main_menu_buttons()
+        caption = await get_home_caption(user_id)
         
         # ✅ HOME MENU PAR PHOTO KE SATH
         await callback_query.message.reply_photo(
             photo=Rkn_Bots.RKN_PIC,
-            caption=f"<b>🏠 Main Menu</b>\n\n"
-            f"<i>Select an option below to manage your settings:</i>\n\n"
-            f"📌 <b>First set your channel:</b>\n"
-            f"`/set_channel -1001234567890`",
+            caption=caption,
             reply_markup=buttons
         )
         await callback_query.answer()
@@ -107,7 +120,6 @@ async def callback_handler(bot, callback_query):
         
         if not chkData:
             buttons = await back_button_only()
-            # ✅ BAGhair PHOTO KE
             await callback_query.message.reply_text(
                 f"❌ **No channel found!**\n\n"
                 f"Please set your channel ID first:\n"
@@ -123,7 +135,6 @@ async def callback_handler(bot, callback_query):
         current_caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
         
         buttons = await caption_page_buttons()
-        # ✅ BAGhair PHOTO KE
         await callback_query.message.reply_text(
             f"**📝 Set Caption**\n\n"
             f"**Current Caption:**\n`{current_caption}`\n\n"
@@ -156,9 +167,7 @@ async def callback_handler(bot, callback_query):
         await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
         await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
         
-        # Sirf Back Button - Delete Caption Button Hataya
         buttons = await back_button_only()
-        # ✅ BAGhair PHOTO KE
         await callback_query.message.reply_text(
             f"✅ **Caption Deleted Successfully!**\n\n"
             f"Now using default caption.\n\n"
@@ -197,7 +206,6 @@ async def callback_handler(bot, callback_query):
             btn_preview = "\n❌ No buttons set yet.\n"
         
         buttons = await button_page_buttons()
-        # ✅ BAGhair PHOTO KE
         await callback_query.message.reply_text(
             f"**📎 Add Button**\n\n"
             f"{btn_preview}\n"
@@ -229,9 +237,7 @@ async def callback_handler(bot, callback_query):
         channel_data = await getChannelData(chnl_id)
         
         if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
-            # Sirf Back Button - Remove Button Hataya
             buttons = await back_button_only()
-            # ✅ BAGhair PHOTO KE
             await callback_query.message.reply_text(
                 f"❌ **No buttons to remove!**\n\n"
                 f"Use `/set_buttons` to add buttons first.",
@@ -244,9 +250,7 @@ async def callback_handler(bot, callback_query):
         await deleteButtonsByUser(user_id)
         await deleteButtons(chnl_id)
         
-        # Sirf Back Button - Remove Button Hataya
         buttons = await back_button_only()
-        # ✅ BAGhair PHOTO KE
         await callback_query.message.reply_text(
             f"✅ **Button Removed Successfully!**\n\n"
             f"Now no buttons will be shown with captions.\n\n"
@@ -297,12 +301,12 @@ async def setChannel(bot, message):
     await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     buttons = await main_menu_buttons()
+    caption = await get_home_caption(user_id)
+    
     # ✅ HOME MENU PAR PHOTO KE SATH
     await message.reply_photo(
         photo=Rkn_Bots.RKN_PIC,
-        caption=f"✅ **Channel Set Successfully!**\n\n"
-        f"**Channel ID:** `{channel_id}`\n\n"
-        f"Now use the menu buttons to manage your settings.",
+        caption=caption,
         reply_markup=buttons
     )
 
@@ -516,7 +520,6 @@ async def help_cmd(bot, message):
         [types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
     ])
     
-    # ✅ BAGhair PHOTO KE
     await message.reply_text(
         f"**🤖 Auto Caption Bot Help**\n\n"
         f"**Setup Guide:**\n"
