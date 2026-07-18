@@ -31,27 +31,6 @@ async def getid():
 
 async def delete(id):
     await users.delete_one(id)
-                     
-async def addCap(chnl_id, caption, buttons=None):
-    dets = {"chnl_id": chnl_id, "caption": caption}
-    if buttons:
-        dets["buttons"] = buttons
-    await chnl_ids.insert_one(dets)
-
-async def updateCap(chnl_id, caption, buttons=None):
-    update_data = {"caption": caption}
-    if buttons is not None:
-        update_data["buttons"] = buttons
-    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": update_data})
-
-async def updateButtons(chnl_id, buttons):
-    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": {"buttons": buttons}})
-
-async def getChannelData(chnl_id):
-    return await chnl_ids.find_one({"chnl_id": chnl_id})
-
-async def deleteButtons(chnl_id):
-    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
 
 # Rkn Developer 
 # Don't Remove Credit 😔
