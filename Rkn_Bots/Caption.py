@@ -179,6 +179,7 @@ async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     user_id = message.from_user.id
     
+    # Get user data
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -198,6 +199,7 @@ async def setButtons(bot, message):
     if not buttons_text:
         return await message.reply("❌ Please provide buttons data!")
     
+    # Parse buttons
     buttons_data = []
     for btn in buttons_text.split("|"):
         btn = btn.strip()
@@ -209,17 +211,21 @@ async def setButtons(bot, message):
                 if text and url:
                     if url.startswith(("https://", "http://", "t.me/")):
                         buttons_data.append([types.InlineKeyboardButton(text, url=url)])
+                    else:
+                        return await message.reply(f"❌ Invalid URL: `{url}`")
     
     if not buttons_data:
         return await message.reply(
             "❌ **No valid buttons found!**\n\n"
-            "**Format:** `[Text]:[URL]` separated by ` | `\n"
-            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
+            "**Format:** `[Text]:[URL]` separated by ` | `"
         )
     
     chnl_id = chkData.get("chnl_id")
+    print(f"📌 Channel ID: {chnl_id}")  # Debug
+    print(f"📌 Buttons to save: {buttons_data}")  # Debug
+    
+    # Save buttons - BOTH ways
     await updateButtonsByUser(user_id, buttons_data)
-    # Also update channel-based entry
     await updateButtons(chnl_id, buttons_data)
     
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
@@ -227,10 +233,10 @@ async def setButtons(bot, message):
     await message.reply(
         f"✅ **Buttons Set Successfully!**\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
-        f"**Total:** `{len(buttons_data)}` button(s)",
+        f"**Total:** `{len(buttons_data)}` button(s)\n\n"
+        f"📌 Buttons saved in database!",
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
-
 
 # ==================== VIEW BUTTONS ====================
 
