@@ -80,3 +80,6 @@ async def getChannelData(chnl_id):
 
 async def deleteButtons(chnl_id):
     await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
+
+# Rkn Developer 
+# Don't Remove Credit 😔
