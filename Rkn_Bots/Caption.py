@@ -16,11 +16,15 @@ print("🔄 Loading Caption.py...")
 # ==================== MAIN MENU BUTTONS ====================
 
 async def main_menu_buttons():
-    """Main menu with 4 buttons"""
+    """Main menu with buttons"""
     buttons = types.InlineKeyboardMarkup([
         [
             types.InlineKeyboardButton("📝 Set Caption", callback_data="set_caption"),
             types.InlineKeyboardButton("📎 Add Button", callback_data="add_button")
+        ],
+        [
+            types.InlineKeyboardButton("🗑️ Remove Channel", callback_data="remove_channel"),
+            types.InlineKeyboardButton("📊 Status", callback_data="status")
         ],
         [
             types.InlineKeyboardButton("📢 Main Channel", url="https://t.me/wolverine273"),
@@ -105,7 +109,6 @@ async def callback_handler(bot, callback_query):
         buttons = await main_menu_buttons()
         caption = await get_home_caption(user_id)
         
-        # ✅ HOME MENU PAR PHOTO KE SATH
         await callback_query.message.reply_photo(
             photo=Rkn_Bots.RKN_PIC,
             caption=caption,
@@ -129,7 +132,6 @@ async def callback_handler(bot, callback_query):
             await callback_query.answer()
             return
         
-        # Get current caption
         chnl_id = chkData.get("chnl_id")
         channel_data = await getChannelData(chnl_id)
         current_caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
@@ -191,12 +193,10 @@ async def callback_handler(bot, callback_query):
             await callback_query.answer()
             return
         
-        # Get current buttons
         chnl_id = chkData.get("chnl_id")
         channel_data = await getChannelData(chnl_id)
         current_buttons = channel_data.get("buttons", []) if channel_data else []
         
-        # Show current buttons if any
         btn_preview = ""
         if current_buttons:
             btn_preview = "\n**Current Buttons:**\n"
@@ -246,7 +246,6 @@ async def callback_handler(bot, callback_query):
             await callback_query.answer()
             return
         
-        # Remove buttons
         await deleteButtonsByUser(user_id)
         await deleteButtons(chnl_id)
         
@@ -258,6 +257,138 @@ async def callback_handler(bot, callback_query):
             reply_markup=buttons
         )
         await callback_query.answer()
+    
+    # ========== REMOVE CHANNEL ==========
+    elif data == "remove_channel":
+        chkData = await getChannelDataByUser(user_id)
+        
+        if not chkData:
+            buttons = await back_button_only()
+            await callback_query.message.reply_text(
+                f"❌ **No channel found!**\n\n"
+                f"You don't have any channel set.",
+                reply_markup=buttons
+            )
+            await callback_query.answer()
+            return
+        
+        # Confirm removal
+        confirm_buttons = types.InlineKeyboardMarkup([
+            [
+                types.InlineKeyboardButton("✅ Yes, Remove", callback_data="confirm_remove_channel"),
+                types.InlineKeyboardButton("❌ Cancel", callback_data="back_to_menu")
+            ]
+        ])
+        
+        await callback_query.message.reply_text(
+            f"⚠️ **Remove Channel**\n\n"
+            f"Are you sure you want to remove your channel?\n"
+            f"Channel ID: `{chkData.get('chnl_id')}`\n\n"
+            f"This will remove all your settings!",
+            reply_markup=confirm_buttons
+        )
+        await callback_query.answer()
+    
+    # ========== CONFIRM REMOVE CHANNEL ==========
+    elif data == "confirm_remove_channel":
+        chkData = await getChannelDataByUser(user_id)
+        
+        if chkData:
+            chnl_id = chkData.get("chnl_id")
+            # ✅ DIRECT DATABASE DELETE
+            await chnl_ids.delete_many({"user_id": user_id})
+            await chnl_ids.delete_many({"chnl_id": chnl_id})
+            print(f"✅ Channel {chnl_id} removed for user {user_id}")
+        
+        buttons = await main_menu_buttons()
+        caption = await get_home_caption(user_id)
+        
+        await callback_query.message.reply_photo(
+            photo=Rkn_Bots.RKN_PIC,
+            caption=f"✅ **Channel Removed Successfully!**\n\n"
+            f"Your channel has been removed.\n\n"
+            f"{caption}",
+            reply_markup=buttons
+        )
+        await callback_query.answer()
+    
+    # ========== STATUS ==========
+    elif data == "status":
+        chkData = await getChannelDataByUser(user_id)
+        
+        if not chkData:
+            buttons = await back_button_only()
+            await callback_query.message.reply_text(
+                f"❌ **No settings found!**\n\n"
+                f"Please set your channel first:\n"
+                f"`/set_channel -1001234567890`",
+                reply_markup=buttons
+            )
+            await callback_query.answer()
+            return
+        
+        chnl_id = chkData.get("chnl_id")
+        channel_data = await getChannelData(chnl_id)
+        
+        caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
+        buttons_data = channel_data.get("buttons", []) if channel_data else []
+        
+        btn_count = len(buttons_data)
+        btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
+        
+        buttons = await back_button_only()
+        await callback_query.message.reply_text(
+            f"**📊 Your Settings**\n\n"
+            f"🔹 **Channel ID:** `{chnl_id}`\n\n"
+            f"🔹 **Caption:**\n`{caption}`\n\n"
+            f"🔹 **Buttons:** ({btn_count})\n{btn_preview}",
+            reply_markup=buttons
+        )
+        await callback_query.answer()
+
+# ==================== REMOVE CHANNEL COMMAND (ALL USERS) ====================
+
+@Client.on_message(filters.private & filters.command("remove_channel"))
+async def remove_channel_cmd(bot, message):
+    print("✅ /remove_channel command triggered!")
+    user_id = message.from_user.id
+    
+    try:
+        await message.delete()
+    except:
+        pass
+    
+    # Check if channel exists
+    chkData = await getChannelDataByUser(user_id)
+    
+    if not chkData:
+        buttons = await back_button_only()
+        return await message.reply_text(
+            "❌ **No channel found!**\n\n"
+            "You don't have any channel set.",
+            reply_markup=buttons
+        )
+    
+    # ✅ CHANNEL ID LE LO
+    chnl_id = chkData.get("chnl_id")
+    
+    # ✅ DATABASE SE COMPLETE DELETE KARO
+    await chnl_ids.delete_many({"user_id": user_id})
+    await chnl_ids.delete_many({"chnl_id": chnl_id})
+    
+    print(f"✅ Channel {chnl_id} removed for user {user_id}")
+    
+    # ✅ HOME MENU SHOW KARO
+    buttons = await main_menu_buttons()
+    caption = await get_home_caption(user_id)
+    
+    await message.reply_photo(
+        photo=Rkn_Bots.RKN_PIC,
+        caption=f"✅ **Channel Removed Successfully!**\n\n"
+        f"Your channel has been removed.\n\n"
+        f"{caption}",
+        reply_markup=buttons
+    )
 
 # ==================== SET CHANNEL ====================
 
@@ -266,7 +397,6 @@ async def setChannel(bot, message):
     print("✅ /set_channel command triggered!")
     user_id = message.from_user.id
     
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await message.delete()
     except:
@@ -292,18 +422,17 @@ async def setChannel(bot, message):
         buttons = await back_button_only()
         return await message.reply_text("❌ Invalid channel ID! Must be a number.", reply_markup=buttons)
     
-    # Reset existing data for this channel
-    await resetChannelData(channel_id)
-    await resetUserData(user_id)
+    # ✅ PEHLE OLD DATA DELETE KARO
+    await chnl_ids.delete_many({"user_id": user_id})
+    await chnl_ids.delete_many({"chnl_id": channel_id})
     
-    # Create fresh data
+    # ✅ NAYA DATA ADD KARO
     await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
     await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     buttons = await main_menu_buttons()
     caption = await get_home_caption(user_id)
     
-    # ✅ HOME MENU PAR PHOTO KE SATH
     await message.reply_photo(
         photo=Rkn_Bots.RKN_PIC,
         caption=caption,
@@ -317,7 +446,6 @@ async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
     user_id = message.from_user.id
     
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await message.delete()
     except:
@@ -363,7 +491,6 @@ async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     user_id = message.from_user.id
     
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await message.delete()
     except:
@@ -421,11 +548,9 @@ async def setButtons(bot, message):
     print(f"📌 Setting buttons for Channel: {chnl_id}")
     print(f"📌 Buttons: {len(buttons_data)} button(s)")
     
-    # Save buttons for this channel
     await updateButtons(chnl_id, buttons_data)
     await updateButtonsByUser(user_id, buttons_data)
     
-    # Verify save
     verify_data = await getChannelData(chnl_id)
     saved_buttons = verify_data.get("buttons", [])
     print(f"✅ Verified: {len(saved_buttons)} buttons saved for channel {chnl_id}")
@@ -449,7 +574,6 @@ async def delCaption(bot, message):
     print("✅ /delcaption command triggered!")
     user_id = message.from_user.id
     
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await message.delete()
     except:
@@ -478,7 +602,6 @@ async def removeButtons(bot, message):
     print("✅ /remove_buttons command triggered!")
     user_id = message.from_user.id
     
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await message.delete()
     except:
@@ -506,11 +629,51 @@ async def removeButtons(bot, message):
         reply_markup=buttons
     )
 
+# ==================== STATUS COMMAND ====================
+
+@Client.on_message(filters.private & filters.command("status"))
+async def status_cmd(bot, message):
+    print("✅ /status command triggered!")
+    user_id = message.from_user.id
+    
+    try:
+        await message.delete()
+    except:
+        pass
+    
+    chkData = await getChannelDataByUser(user_id)
+    
+    if not chkData:
+        buttons = await back_button_only()
+        return await message.reply_text(
+            "❌ **No settings found!**\n\n"
+            "Please set your channel first:\n"
+            "`/set_channel -1001234567890`",
+            reply_markup=buttons
+        )
+    
+    chnl_id = chkData.get("chnl_id")
+    channel_data = await getChannelData(chnl_id)
+    
+    caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
+    buttons_data = channel_data.get("buttons", []) if channel_data else []
+    
+    btn_count = len(buttons_data)
+    btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
+    
+    buttons = await back_button_only()
+    await message.reply_text(
+        f"**📊 Your Settings**\n\n"
+        f"🔹 **Channel ID:** `{chnl_id}`\n\n"
+        f"🔹 **Caption:**\n`{caption}`\n\n"
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}",
+        reply_markup=buttons
+    )
+
 # ==================== HELP COMMAND ====================
 
 @Client.on_message(filters.private & filters.command("help"))
 async def help_cmd(bot, message):
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await message.delete()
     except:
@@ -530,8 +693,10 @@ async def help_cmd(bot, message):
         f"📌 `/set_channel` - Set channel ID\n"
         f"📝 `/set_caption` - Set caption\n"
         f"📎 `/set_buttons` - Set buttons\n"
+        f"🗑️ `/remove_channel` - Remove channel\n"
         f"❌ `/delcaption` - Delete caption\n"
-        f"🗑️ `/remove_buttons` - Remove buttons\n\n"
+        f"🗑️ `/remove_buttons` - Remove buttons\n"
+        f"📊 `/status` - Check settings\n\n"
         f"**📌 Variables in Caption:**\n"
         f"`{{file_name}}` - Original file name\n\n"
         f"**📌 Button Format:**\n"
