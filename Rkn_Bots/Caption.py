@@ -62,6 +62,7 @@ async def start_cmd(bot, message):
     
     buttons = await main_menu_buttons()
     
+    # ✅ SIRF HOME MENU PAR PHOTO
     await message.reply_photo(
         photo=Rkn_Bots.RKN_PIC,
         caption=f"<b>Hey, {message.from_user.mention}\n\nWelcome to Auto Caption Bot! 🎯</b>\n\n"
@@ -78,10 +79,19 @@ async def callback_handler(bot, callback_query):
     user_id = callback_query.from_user.id
     data = callback_query.data
     
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await callback_query.message.delete()
+    except:
+        pass
+    
     # ========== BACK TO MENU ==========
     if data == "back_to_menu":
         buttons = await main_menu_buttons()
-        await callback_query.message.edit_caption(
+        
+        # ✅ HOME MENU PAR PHOTO KE SATH
+        await callback_query.message.reply_photo(
+            photo=Rkn_Bots.RKN_PIC,
             caption=f"<b>🏠 Main Menu</b>\n\n"
             f"<i>Select an option below to manage your settings:</i>\n\n"
             f"📌 <b>First set your channel:</b>\n"
@@ -97,8 +107,9 @@ async def callback_handler(bot, callback_query):
         
         if not chkData:
             buttons = await back_button_only()
-            await callback_query.message.edit_caption(
-                caption=f"❌ **No channel found!**\n\n"
+            # ✅ BAGhair PHOTO KE
+            await callback_query.message.reply_text(
+                f"❌ **No channel found!**\n\n"
                 f"Please set your channel ID first:\n"
                 f"`/set_channel -1001234567890`",
                 reply_markup=buttons
@@ -112,8 +123,9 @@ async def callback_handler(bot, callback_query):
         current_caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
         
         buttons = await caption_page_buttons()
-        await callback_query.message.edit_caption(
-            caption=f"**📝 Set Caption**\n\n"
+        # ✅ BAGhair PHOTO KE
+        await callback_query.message.reply_text(
+            f"**📝 Set Caption**\n\n"
             f"**Current Caption:**\n`{current_caption}`\n\n"
             f"**How to Set:**\n"
             f"`/set_caption Your caption here {{file_name}}`\n\n"
@@ -132,8 +144,8 @@ async def callback_handler(bot, callback_query):
         
         if not chkData:
             buttons = await back_button_only()
-            await callback_query.message.edit_caption(
-                caption=f"❌ **No channel found!**\n\n"
+            await callback_query.message.reply_text(
+                f"❌ **No channel found!**\n\n"
                 f"Please set your channel ID first.",
                 reply_markup=buttons
             )
@@ -146,8 +158,9 @@ async def callback_handler(bot, callback_query):
         
         # Sirf Back Button - Delete Caption Button Hataya
         buttons = await back_button_only()
-        await callback_query.message.edit_caption(
-            caption=f"✅ **Caption Deleted Successfully!**\n\n"
+        # ✅ BAGhair PHOTO KE
+        await callback_query.message.reply_text(
+            f"✅ **Caption Deleted Successfully!**\n\n"
             f"Now using default caption.\n\n"
             f"**Default Caption:**\n`{Rkn_Bots.DEF_CAP}`",
             reply_markup=buttons
@@ -160,8 +173,8 @@ async def callback_handler(bot, callback_query):
         
         if not chkData:
             buttons = await back_button_only()
-            await callback_query.message.edit_caption(
-                caption=f"❌ **No channel found!**\n\n"
+            await callback_query.message.reply_text(
+                f"❌ **No channel found!**\n\n"
                 f"Please set your channel ID first:\n"
                 f"`/set_channel -1001234567890`",
                 reply_markup=buttons
@@ -184,8 +197,9 @@ async def callback_handler(bot, callback_query):
             btn_preview = "\n❌ No buttons set yet.\n"
         
         buttons = await button_page_buttons()
-        await callback_query.message.edit_caption(
-            caption=f"**📎 Add Button**\n\n"
+        # ✅ BAGhair PHOTO KE
+        await callback_query.message.reply_text(
+            f"**📎 Add Button**\n\n"
             f"{btn_preview}\n"
             f"**How to Add Buttons:**\n"
             f"`/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
@@ -204,8 +218,8 @@ async def callback_handler(bot, callback_query):
         
         if not chkData:
             buttons = await back_button_only()
-            await callback_query.message.edit_caption(
-                caption=f"❌ **No channel found!**",
+            await callback_query.message.reply_text(
+                f"❌ **No channel found!**",
                 reply_markup=buttons
             )
             await callback_query.answer()
@@ -215,10 +229,11 @@ async def callback_handler(bot, callback_query):
         channel_data = await getChannelData(chnl_id)
         
         if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
-            # ✅ SIRF BACK BUTTON - Remove Button HATAYA
+            # Sirf Back Button - Remove Button Hataya
             buttons = await back_button_only()
-            await callback_query.message.edit_caption(
-                caption=f"❌ **No buttons to remove!**\n\n"
+            # ✅ BAGhair PHOTO KE
+            await callback_query.message.reply_text(
+                f"❌ **No buttons to remove!**\n\n"
                 f"Use `/set_buttons` to add buttons first.",
                 reply_markup=buttons
             )
@@ -231,8 +246,9 @@ async def callback_handler(bot, callback_query):
         
         # Sirf Back Button - Remove Button Hataya
         buttons = await back_button_only()
-        await callback_query.message.edit_caption(
-            caption=f"✅ **Button Removed Successfully!**\n\n"
+        # ✅ BAGhair PHOTO KE
+        await callback_query.message.reply_text(
+            f"✅ **Button Removed Successfully!**\n\n"
             f"Now no buttons will be shown with captions.\n\n"
             f"<i>Use Add Button to add new buttons.</i>",
             reply_markup=buttons
@@ -246,9 +262,15 @@ async def setChannel(bot, message):
     print("✅ /set_channel command triggered!")
     user_id = message.from_user.id
     
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await message.delete()
+    except:
+        pass
+    
     if len(message.command) < 2:
         buttons = await back_button_only()
-        return await message.reply(
+        return await message.reply_text(
             "❌ **Please provide channel ID!**\n\n"
             "**Usage:** `/set_channel -1001234567890`\n\n"
             "**How to get channel ID:**\n"
@@ -264,7 +286,7 @@ async def setChannel(bot, message):
         channel_id = int(channel_id)
     except:
         buttons = await back_button_only()
-        return await message.reply("❌ Invalid channel ID! Must be a number.", reply_markup=buttons)
+        return await message.reply_text("❌ Invalid channel ID! Must be a number.", reply_markup=buttons)
     
     # Reset existing data for this channel
     await resetChannelData(channel_id)
@@ -275,8 +297,10 @@ async def setChannel(bot, message):
     await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     buttons = await main_menu_buttons()
-    await message.reply(
-        f"✅ **Channel Set Successfully!**\n\n"
+    # ✅ HOME MENU PAR PHOTO KE SATH
+    await message.reply_photo(
+        photo=Rkn_Bots.RKN_PIC,
+        caption=f"✅ **Channel Set Successfully!**\n\n"
         f"**Channel ID:** `{channel_id}`\n\n"
         f"Now use the menu buttons to manage your settings.",
         reply_markup=buttons
@@ -289,9 +313,15 @@ async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
     user_id = message.from_user.id
     
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await message.delete()
+    except:
+        pass
+    
     if len(message.command) < 2:
         buttons = await caption_page_buttons()
-        return await message.reply(
+        return await message.reply_text(
             "❌ **Please provide caption!**\n\n"
             "**Usage:** `/set_caption Your caption here {file_name}`\n\n"
             "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
@@ -308,14 +338,14 @@ async def setCaption(bot, message):
         await updateCapByUser(user_id, caption)
         await updateCap(chnl_id, caption)
         buttons = await caption_page_buttons()
-        return await message.reply(
+        return await message.reply_text(
             f"✅ **Caption Updated Successfully!**\n\n"
             f"**Your New Caption:**\n`{caption}`",
             reply_markup=buttons
         )
     else:
         buttons = await back_button_only()
-        return await message.reply(
+        return await message.reply_text(
             "❌ **No channel found!**\n\n"
             "Please set your channel ID first:\n"
             "`/set_channel -1001234567890`",
@@ -329,10 +359,16 @@ async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     user_id = message.from_user.id
     
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await message.delete()
+    except:
+        pass
+    
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         buttons = await back_button_only()
-        return await message.reply(
+        return await message.reply_text(
             "❌ **No channel found!**\n\n"
             "Please set your channel ID first:\n"
             "`/set_channel -1001234567890`",
@@ -341,7 +377,7 @@ async def setButtons(bot, message):
     
     if len(message.command) < 2:
         buttons = await button_page_buttons()
-        return await message.reply(
+        return await message.reply_text(
             "❌ **Please provide buttons!**\n\n"
             "**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
             "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
@@ -352,7 +388,7 @@ async def setButtons(bot, message):
     
     buttons_text = message.text.split(" ", 1)[1]
     if not buttons_text:
-        return await message.reply("❌ Please provide buttons data!")
+        return await message.reply_text("❌ Please provide buttons data!")
     
     buttons_data = []
     for btn in buttons_text.split("|"):
@@ -366,11 +402,11 @@ async def setButtons(bot, message):
                     if url.startswith(("https://", "http://", "t.me/")):
                         buttons_data.append([types.InlineKeyboardButton(text, url=url)])
                     else:
-                        return await message.reply(f"❌ Invalid URL: `{url}`")
+                        return await message.reply_text(f"❌ Invalid URL: `{url}`")
     
     if not buttons_data:
         buttons = await button_page_buttons()
-        return await message.reply(
+        return await message.reply_text(
             "❌ **No valid buttons found!**\n\n"
             "**Format:** `[Text]:[URL]` separated by ` | `\n"
             "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`",
@@ -393,7 +429,7 @@ async def setButtons(bot, message):
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
     buttons = await button_page_buttons()
-    await message.reply(
+    await message.reply_text(
         f"✅ **Buttons Set Successfully!**\n\n"
         f"📌 **Channel ID:** `{chnl_id}`\n"
         f"🔢 **Buttons Saved:** `{len(saved_buttons)}` button(s)\n\n"
@@ -409,17 +445,23 @@ async def delCaption(bot, message):
     print("✅ /delcaption command triggered!")
     user_id = message.from_user.id
     
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await message.delete()
+    except:
+        pass
+    
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         buttons = await back_button_only()
-        return await message.reply("❌ No data found for your channel!", reply_markup=buttons)
+        return await message.reply_text("❌ No data found for your channel!", reply_markup=buttons)
     
     chnl_id = chkData.get("chnl_id")
     await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
     await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
     
     buttons = await back_button_only()
-    await message.reply(
+    await message.reply_text(
         "✅ **Caption Deleted Successfully!**\n"
         f"Now I will use default caption.",
         reply_markup=buttons
@@ -432,23 +474,29 @@ async def removeButtons(bot, message):
     print("✅ /remove_buttons command triggered!")
     user_id = message.from_user.id
     
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await message.delete()
+    except:
+        pass
+    
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         buttons = await back_button_only()
-        return await message.reply("❌ No data found for your channel!", reply_markup=buttons)
+        return await message.reply_text("❌ No data found for your channel!", reply_markup=buttons)
     
     chnl_id = chkData.get("chnl_id")
     channel_data = await getChannelData(chnl_id)
     
     if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
         buttons = await back_button_only()
-        return await message.reply("❌ No buttons are currently set!", reply_markup=buttons)
+        return await message.reply_text("❌ No buttons are currently set!", reply_markup=buttons)
     
     await deleteButtonsByUser(user_id)
     await deleteButtons(chnl_id)
     
     buttons = await back_button_only()
-    await message.reply(
+    await message.reply_text(
         "✅ **Buttons Removed Successfully!**\n"
         "Now no buttons will be shown with captions.",
         reply_markup=buttons
@@ -458,11 +506,18 @@ async def removeButtons(bot, message):
 
 @Client.on_message(filters.private & filters.command("help"))
 async def help_cmd(bot, message):
+    # ✅ OLD MESSAGE DELETE KARO
+    try:
+        await message.delete()
+    except:
+        pass
+    
     buttons = types.InlineKeyboardMarkup([
         [types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
     ])
     
-    await message.reply(
+    # ✅ BAGhair PHOTO KE
+    await message.reply_text(
         f"**🤖 Auto Caption Bot Help**\n\n"
         f"**Setup Guide:**\n"
         f"1️⃣ `/set_channel -1001234567890` - Set your channel ID\n"
