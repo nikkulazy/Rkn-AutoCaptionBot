@@ -12,6 +12,9 @@ from .database import addCap, updateCap, updateButtons, deleteButtons, getChanne
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from pyrogram.errors import FloodWait
 
+# ============ CHECK KAREN KE YE FUNCTION REGISTER HO RAHE HAIN ============
+print("🔄 Loading Caption.py...")
+
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["rknusers"]))
 async def all_db_users_here(client, message):
     start_t = time.time()
@@ -69,47 +72,40 @@ async def restart_bot(b, m):
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_cmd(bot, message):
+    print("✅ /start command triggered!")  # Debug log
     user_id = int(message.from_user.id)
     await insert(user_id)
     
     await message.reply_photo(
         photo=Rkn_Bots.RKN_PIC,
-        caption=f"<b>Hey, {message.from_user.mention}\n\nI'm an auto-caption bot. I automatically edit captions for videos, audio files, and documents posted on channels.\n\nSelect an option below:</b>",
+        caption=f"<b>Hey, {message.from_user.mention}\n\nI'm an auto-caption bot.\n\nUse these commands in bot (private):</b>\n\n"
+        f"📌 `/set_channel -1001234567890` - Set channel ID\n"
+        f"📝 `/set_caption Your caption {file_name}` - Set caption\n"
+        f"📎 `/set_buttons [Text]:[URL] | [Text]:[URL]` - Set buttons\n"
+        f"👁️ `/view_buttons` - View buttons\n"
+        f"🗑️ `/remove_buttons` - Remove buttons\n"
+        f"❌ `/delcaption` - Delete caption\n"
+        f"📊 `/status` - Check settings",
         reply_markup=types.InlineKeyboardMarkup([
-            [
-                types.InlineKeyboardButton('📝 Set Caption', callback_data="set_caption"),
-                types.InlineKeyboardButton('📎 Set Buttons', callback_data="set_buttons")
-            ],
-            [
-                types.InlineKeyboardButton('❌ Delete Caption', callback_data="del_caption"),
-                types.InlineKeyboardButton('🗑️ Remove Buttons', callback_data="remove_buttons")
-            ],
-            [
-                types.InlineKeyboardButton('👁️ View Buttons', callback_data="view_buttons"),
-                types.InlineKeyboardButton('📊 Status', callback_data="status_check")
-            ],
             [
                 types.InlineKeyboardButton('📢 Main Channel', url='https://t.me/wolverine273'),
                 types.InlineKeyboardButton('💬 Help Group', url='https://t.me/WOLVERIN_P')
-            ],
-            [
-                types.InlineKeyboardButton('♻️ MOVIE GROUP ♻️', url='https://t.me/thinkfilmy')
             ]
         ])
     )
 
 
-# ==================== SET CHANNEL (BOT ME) ====================
+# ==================== SET CHANNEL ====================
 
 @Client.on_message(filters.private & filters.command("set_channel"))
 async def setChannel(bot, message):
+    print("✅ /set_channel command triggered!")  # Debug log
     user_id = message.from_user.id
     
     if len(message.command) < 2:
         return await message.reply(
             "❌ **Please provide channel ID!**\n\n"
-            "**Usage:**\n"
-            "`/set_channel -1001234567890`\n\n"
+            "**Usage:** `/set_channel -1001234567890`\n\n"
             "**How to get channel ID:**\n"
             "1. Add @MissRose_bot to your channel\n"
             "2. Send /id in channel\n"
@@ -136,155 +132,77 @@ async def setChannel(bot, message):
         f"Now you can use:\n"
         f"• `/set_caption` - Set caption\n"
         f"• `/set_buttons` - Set buttons\n"
-        f"• `/delcaption` - Delete caption\n"
-        f"• `/remove_buttons` - Remove buttons\n"
-        f"• `/view_buttons` - View buttons\n"
-        f"• `/status` - View current settings"
+        f"• `/status` - View settings"
     )
 
 
-# ==================== SET CAPTION (BOT ME) ====================
-
-@Client.on_message(filters.private & filters.command("set_caption"))
-async def setCaption(bot, message):
-    user_id = message.from_user.id
-    
-    if len(message.command) < 2:
-        return await message.reply(
-            "❌ **Please provide caption!**\n\n"
-            "**Usage:**\n"
-            "`/set_caption Your caption here {file_name}`\n\n"
-            "**Example:**\n"
-            "`/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
-            "**{file_name}** - Shows original file name"
-        )
-    
-    caption = message.text.split(" ", 1)[1]
-    
-    chkData = await getChannelDataByUser(user_id)
-    
-    if chkData:
-        await updateCapByUser(user_id, caption)
-        return await message.reply(
-            f"✅ **Caption Updated Successfully!**\n\n"
-            f"**Your New Caption:**\n`{caption}`\n\n"
-            f"📌 This caption will be applied to your channel."
-        )
-    else:
-        return await message.reply(
-            "❌ **No channel found!**\n\n"
-            "Please set your channel ID first:\n"
-            "`/set_channel -1001234567890`\n\n"
-            "Get your channel ID from @MissRose_bot"
-        )
-
-
-# ==================== SET BUTTONS (BOT ME) - DEBUG VERSION ====================
+# ==================== SET BUTTONS ====================
 
 @Client.on_message(filters.private & filters.command("set_buttons"))
 async def setButtons(bot, message):
+    print("✅ /set_buttons command triggered!")  # Debug log
     user_id = message.from_user.id
     
-    try:
-        # Step 1: Check if channel exists
-        chkData = await getChannelDataByUser(user_id)
-        if not chkData:
-            return await message.reply(
-                "❌ **No channel found!**\n\n"
-                "Please set your channel ID first:\n"
-                "`/set_channel -1001234567890`"
-            )
-        
-        # Step 2: Check if command has text
-        if len(message.command) < 2:
-            return await message.reply(
-                "❌ **Please provide buttons!**\n\n"
-                "**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
-                "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
-            )
-        
-        buttons_text = message.text.split(" ", 1)[1]
-        if not buttons_text:
-            return await message.reply("❌ Please provide buttons data!")
-        
-        # Step 3: Parse buttons
-        buttons_data = []
-        parsed_count = 0
-        invalid_urls = []
-        
-        for btn in buttons_text.split("|"):
-            btn = btn.strip()
-            if ":" in btn:
-                parts = btn.split(":", 1)
-                if len(parts) == 2:
-                    text = parts[0].strip()
-                    url = parts[1].strip()
-                    if text and url:
-                        if url.startswith(("https://", "http://", "t.me/")):
-                            buttons_data.append([types.InlineKeyboardButton(text, url=url)])
-                            parsed_count += 1
-                        else:
-                            invalid_urls.append(url)
-        
-        # Step 4: Check if any valid buttons found
-        if not buttons_data:
-            invalid_msg = ""
-            if invalid_urls:
-                invalid_msg = f"\n\n**Invalid URLs:** `{', '.join(invalid_urls)}`"
-            return await message.reply(
-                f"❌ **No valid buttons parsed!**{invalid_msg}\n\n"
-                f"**Raw Input:** `{buttons_text}`\n\n"
-                f"**Format:** `[Text]:[URL]` separated by ` | `\n"
-                f"**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
-            )
-        
-        # Step 5: Update database
-        await updateButtonsByUser(user_id, buttons_data)
-        
-        # Step 6: Verify by fetching again
-        updated_data = await getChannelDataByUser(user_id)
-        saved_buttons = updated_data.get("buttons", [])
-        
-        preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in saved_buttons])
-        
-        await message.reply(
-            f"✅ **Buttons Set Successfully!**\n\n"
-            f"📌 **Channel ID:** `{chkData.get('chnl_id')}`\n"
-            f"🔢 **Parsed:** `{parsed_count}` button(s)\n"
-            f"💾 **Saved:** `{len(saved_buttons)}` button(s)\n\n"
-            f"**Your Buttons:**\n{preview}\n\n"
-            f"📌 Use `/view_buttons` to see them again.",
-            reply_markup=types.InlineKeyboardMarkup(saved_buttons)
-        )
-        
-    except Exception as e:
-        await message.reply(f"❌ **Error:** `{str(e)}`")
-
-
-# ==================== REMOVE BUTTONS (BOT ME) ====================
-
-@Client.on_message(filters.private & filters.command("remove_buttons"))
-async def removeButtons(bot, message):
-    user_id = message.from_user.id
-    
+    # Check if channel exists
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
-        return await message.reply("❌ No data found for your channel!")
+        return await message.reply(
+            "❌ **No channel found!**\n\n"
+            "Please set your channel ID first:\n"
+            "`/set_channel -1001234567890`"
+        )
     
-    if "buttons" not in chkData or not chkData["buttons"]:
-        return await message.reply("❌ No buttons are currently set!")
+    # Check if command has text
+    if len(message.command) < 2:
+        return await message.reply(
+            "❌ **Please provide buttons!**\n\n"
+            "**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
+            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
+        )
     
-    await deleteButtonsByUser(user_id)
+    buttons_text = message.text.split(" ", 1)[1]
+    if not buttons_text:
+        return await message.reply("❌ Please provide buttons data!")
+    
+    # Parse buttons
+    buttons_data = []
+    for btn in buttons_text.split("|"):
+        btn = btn.strip()
+        if ":" in btn:
+            parts = btn.split(":", 1)
+            if len(parts) == 2:
+                text = parts[0].strip()
+                url = parts[1].strip()
+                if text and url:
+                    if url.startswith(("https://", "http://", "t.me/")):
+                        buttons_data.append([types.InlineKeyboardButton(text, url=url)])
+    
+    if not buttons_data:
+        return await message.reply(
+            "❌ **No valid buttons found!**\n\n"
+            "**Format:** `[Text]:[URL]` separated by ` | `\n"
+            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
+        )
+    
+    # Save buttons
+    await updateButtonsByUser(user_id, buttons_data)
+    
+    # Preview
+    preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
+    
     await message.reply(
-        "✅ **Buttons Removed Successfully!**\n"
-        "Now no buttons will be shown with captions."
+        f"✅ **Buttons Set Successfully!**\n\n"
+        f"**Your Buttons:**\n{preview}\n\n"
+        f"**Total:** `{len(buttons_data)}` button(s)",
+        reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
 
 
-# ==================== VIEW BUTTONS (BOT ME) ====================
+# ==================== VIEW BUTTONS ====================
 
 @Client.on_message(filters.private & filters.command("view_buttons"))
 async def viewButtons(bot, message):
+    print("✅ /view_buttons command triggered!")  # Debug log
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
@@ -301,10 +219,32 @@ async def viewButtons(bot, message):
     )
 
 
-# ==================== DELETE CAPTION (BOT ME) ====================
+# ==================== REMOVE BUTTONS ====================
+
+@Client.on_message(filters.private & filters.command("remove_buttons"))
+async def removeButtons(bot, message):
+    print("✅ /remove_buttons command triggered!")  # Debug log
+    user_id = message.from_user.id
+    
+    chkData = await getChannelDataByUser(user_id)
+    if not chkData:
+        return await message.reply("❌ No data found for your channel!")
+    
+    if "buttons" not in chkData or not chkData["buttons"]:
+        return await message.reply("❌ No buttons are currently set!")
+    
+    await deleteButtonsByUser(user_id)
+    await message.reply(
+        "✅ **Buttons Removed Successfully!**\n"
+        "Now no buttons will be shown with captions."
+    )
+
+
+# ==================== DELETE CAPTION ====================
 
 @Client.on_message(filters.private & filters.command(["delcaption", "del_caption", "delete_caption"]))
 async def delCaption(bot, message):
+    print("✅ /delcaption command triggered!")  # Debug log
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
@@ -314,14 +254,47 @@ async def delCaption(bot, message):
     await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
     await message.reply(
         "✅ **Caption Deleted Successfully!**\n"
-        f"Now I will use default caption:\n`{Rkn_Bots.DEF_CAP}`"
+        f"Now I will use default caption."
     )
 
 
-# ==================== STATUS COMMAND ====================
+# ==================== SET CAPTION ====================
+
+@Client.on_message(filters.private & filters.command("set_caption"))
+async def setCaption(bot, message):
+    print("✅ /set_caption command triggered!")  # Debug log
+    user_id = message.from_user.id
+    
+    if len(message.command) < 2:
+        return await message.reply(
+            "❌ **Please provide caption!**\n\n"
+            "**Usage:** `/set_caption Your caption here {file_name}`\n\n"
+            "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`"
+        )
+    
+    caption = message.text.split(" ", 1)[1]
+    
+    chkData = await getChannelDataByUser(user_id)
+    
+    if chkData:
+        await updateCapByUser(user_id, caption)
+        return await message.reply(
+            f"✅ **Caption Updated Successfully!**\n\n"
+            f"**Your New Caption:**\n`{caption}`"
+        )
+    else:
+        return await message.reply(
+            "❌ **No channel found!**\n\n"
+            "Please set your channel ID first:\n"
+            "`/set_channel -1001234567890`"
+        )
+
+
+# ==================== STATUS ====================
 
 @Client.on_message(filters.private & filters.command("status"))
 async def status(bot, message):
+    print("✅ /status command triggered!")  # Debug log
     user_id = message.from_user.id
     chkData = await getChannelDataByUser(user_id)
     
@@ -343,137 +316,8 @@ async def status(bot, message):
         f"**📊 Your Settings**\n\n"
         f"🔹 **Channel ID:** `{channel_id}`\n"
         f"🔹 **Caption:**\n`{caption}`\n\n"
-        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}\n\n"
-        f"📌 Use `/view_buttons` to see buttons with clickable preview."
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}"
     )
-
-
-# ==================== CALLBACK QUERY HANDLER ====================
-
-@Client.on_callback_query()
-async def callback_handler(bot, callback_query):
-    data = callback_query.data
-    
-    if data == "set_caption":
-        await callback_query.message.edit(
-            "**📝 Set Caption**\n\n"
-            "Send command in bot:\n"
-            "`/set_caption Your caption here {file_name}`\n\n"
-            "**Example:**\n"
-            "`/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
-            "**{file_name}** - Shows original file name",
-            reply_markup=types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-            ])
-        )
-        await callback_query.answer()
-    
-    elif data == "set_buttons":
-        await callback_query.message.edit(
-            "**📎 Set Buttons**\n\n"
-            "Send command in bot:\n"
-            "`/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
-            "**Examples:**\n"
-            "🔹 `/set_buttons 📢 Join:https://t.me/wolverine273`\n"
-            "🔹 `/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`\n\n"
-            "⚠️ Use `|` to separate multiple buttons",
-            reply_markup=types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-            ])
-        )
-        await callback_query.answer()
-    
-    elif data == "del_caption":
-        await callback_query.message.edit(
-            "**❌ Delete Caption**\n\n"
-            "Send command in bot:\n"
-            "`/delcaption`\n\n"
-            "✅ After this, bot will use default caption",
-            reply_markup=types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-            ])
-        )
-        await callback_query.answer()
-    
-    elif data == "remove_buttons":
-        await callback_query.message.edit(
-            "**🗑️ Remove Buttons**\n\n"
-            "Send command in bot:\n"
-            "`/remove_buttons`\n\n"
-            "✅ All buttons will be removed",
-            reply_markup=types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-            ])
-        )
-        await callback_query.answer()
-    
-    elif data == "view_buttons":
-        await callback_query.message.edit(
-            "**👁️ View Buttons**\n\n"
-            "Send command in bot:\n"
-            "`/view_buttons`\n\n"
-            "📌 Bot will show all currently set buttons",
-            reply_markup=types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-            ])
-        )
-        await callback_query.answer()
-    
-    elif data == "status_check":
-        user_id = callback_query.from_user.id
-        chkData = await getChannelDataByUser(user_id)
-        if not chkData:
-            await callback_query.message.edit(
-                "❌ No settings found. Use /set_channel to set your channel.",
-                reply_markup=types.InlineKeyboardMarkup([
-                    [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-                ])
-            )
-            await callback_query.answer()
-            return
-        
-        channel_id = chkData.get("chnl_id", "Not set")
-        caption = chkData.get("caption", "Not set")
-        buttons = chkData.get("buttons", [])
-        btn_count = len(buttons)
-        
-        await callback_query.message.edit(
-            f"**📊 Your Settings**\n\n"
-            f"🔹 **Channel ID:** `{channel_id}`\n"
-            f"🔹 **Caption:**\n`{caption}`\n\n"
-            f"🔹 **Buttons:** {btn_count} button(s)",
-            reply_markup=types.InlineKeyboardMarkup([
-                [types.InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-            ])
-        )
-        await callback_query.answer()
-    
-    elif data == "back_to_start":
-        await callback_query.message.edit(
-            f"<b>Hey, {callback_query.from_user.mention}\n\nI'm an auto-caption bot. I automatically edit captions for videos, audio files, and documents posted on channels.\n\nSelect an option below:</b>",
-            reply_markup=types.InlineKeyboardMarkup([
-                [
-                    types.InlineKeyboardButton('📝 Set Caption', callback_data="set_caption"),
-                    types.InlineKeyboardButton('📎 Set Buttons', callback_data="set_buttons")
-                ],
-                [
-                    types.InlineKeyboardButton('❌ Delete Caption', callback_data="del_caption"),
-                    types.InlineKeyboardButton('🗑️ Remove Buttons', callback_data="remove_buttons")
-                ],
-                [
-                    types.InlineKeyboardButton('👁️ View Buttons', callback_data="view_buttons"),
-                    types.InlineKeyboardButton('📊 Status', callback_data="status_check")
-                ],
-                [
-                    types.InlineKeyboardButton('📢 Main Channel', url='https://t.me/wolverine273'),
-                    types.InlineKeyboardButton('💬 Help Group', url='https://t.me/WOLVERIN_P')
-                ],
-                [
-                    types.InlineKeyboardButton('♻️ MOVIE GROUP ♻️', url='https://t.me/thinkfilmy')
-                ]
-            ])
-        )
-        await callback_query.answer()
 
 
 # ==================== AUTO EDIT CAPTION (CHANNEL) ====================
@@ -519,7 +363,6 @@ async def auto_edit_caption(bot, message):
                     continue
     return
 
+print("✅ Caption.py loaded successfully!")
 # Rkn Developer 
 # Don't Remove Credit 😔
-# Telegram Channel @RknDeveloper & @Rkn_Bots
-# Developer @RknDeveloperr
