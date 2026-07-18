@@ -33,7 +33,6 @@ async def delete(id):
 async def addCapByUser(user_id, chnl_id, caption, buttons=None):
     dets = {"user_id": user_id, "chnl_id": chnl_id, "caption": caption}
     if buttons:
-        # Store buttons as list of dicts
         dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
 
@@ -41,7 +40,6 @@ async def updateCapByUser(user_id, caption):
     await chnl_ids.update_one({"user_id": user_id}, {"$set": {"caption": caption}})
 
 async def updateButtonsByUser(user_id, buttons):
-    # Store buttons as list of dicts
     buttons_dict = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.update_one({"user_id": user_id}, {"$set": {"buttons": buttons_dict}})
 
@@ -51,7 +49,6 @@ async def deleteButtonsByUser(user_id):
 async def getChannelDataByUser(user_id):
     data = await chnl_ids.find_one({"user_id": user_id})
     if data and "buttons" in data and data["buttons"]:
-        # Convert dicts back to InlineKeyboardButton objects
         from pyrogram.types import InlineKeyboardButton
         data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
     return data
