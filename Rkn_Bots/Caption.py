@@ -119,11 +119,9 @@ async def setChannel(bot, message):
     
     if chkData:
         await chnl_ids.update_one({"user_id": user_id}, {"$set": {"chnl_id": channel_id}})
-        # Also update in channel-based search
         await chnl_ids.update_one({"chnl_id": channel_id}, {"$set": {"user_id": user_id}}, upsert=True)
     else:
         await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
-        # Also add channel-based entry
         await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     await message.reply(
@@ -158,7 +156,6 @@ async def setCaption(bot, message):
     if chkData:
         chnl_id = chkData.get("chnl_id")
         await updateCapByUser(user_id, caption)
-        # Also update channel-based entry
         await updateCap(chnl_id, caption)
         return await message.reply(
             f"✅ **Caption Updated Successfully!**\n\n"
@@ -179,7 +176,6 @@ async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     user_id = message.from_user.id
     
-    # Get user data
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -192,14 +188,15 @@ async def setButtons(bot, message):
         return await message.reply(
             "❌ **Please provide buttons!**\n\n"
             "**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
-            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
+            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
+            "**Multiple Buttons:**\n"
+            "`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`"
         )
     
     buttons_text = message.text.split(" ", 1)[1]
     if not buttons_text:
         return await message.reply("❌ Please provide buttons data!")
     
-    # Parse buttons
     buttons_data = []
     for btn in buttons_text.split("|"):
         btn = btn.strip()
@@ -217,12 +214,11 @@ async def setButtons(bot, message):
     if not buttons_data:
         return await message.reply(
             "❌ **No valid buttons found!**\n\n"
-            "**Format:** `[Text]:[URL]` separated by ` | `"
+            "**Format:** `[Text]:[URL]` separated by ` | `\n"
+            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`"
         )
     
     chnl_id = chkData.get("chnl_id")
-    print(f"📌 Channel ID: {chnl_id}")  # Debug
-    print(f"📌 Buttons to save: {buttons_data}")  # Debug
     
     # Save buttons - BOTH ways
     await updateButtonsByUser(user_id, buttons_data)
@@ -234,9 +230,10 @@ async def setButtons(bot, message):
         f"✅ **Buttons Set Successfully!**\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
         f"**Total:** `{len(buttons_data)}` button(s)\n\n"
-        f"📌 Buttons saved in database!",
+        f"📌 Now post a file in your channel to see buttons!",
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
+
 
 # ==================== VIEW BUTTONS ====================
 
@@ -334,16 +331,24 @@ async def status(bot, message):
     )
 
 
-# ==================== AUTO EDIT CAPTION (CHANNEL) - FIXED ====================
+# ==================== AUTO EDIT CAPTION (CHANNEL) ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
-    print(f"📩 New message in channel: {chnl_id}")  # Debug log
+    print(f"📩 New message in channel: {chnl_id}")
     
-    # Get channel data
     cap_dets = await getChannelData(chnl_id)
-    print(f"📊 Channel data: {cap_dets}")  # Debug log
+    
+    if cap_dets:
+        print(f"📝 Caption: {cap_dets.get('caption')}")
+        buttons = cap_dets.get('buttons')
+        if buttons:
+            print(f"🔘 Buttons found: {len(buttons)} button(s)")
+        else:
+            print("🔘 No buttons found in data")
+    else:
+        print("❌ No data found for channel")
     
     if message.media:
         for file_type in ("video", "audio", "document", "voice"):
@@ -355,38 +360,39 @@ async def auto_edit_caption(bot, message):
                     .replace("_", " ")
                     .replace(".", " ")
                 )
-                print(f"📁 File: {file_name}")  # Debug log
+                print(f"📁 File: {file_name}")
                 
                 try:
                     if cap_dets:
                         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
                         buttons = cap_dets.get("buttons", None)
-                        replaced_caption = cap.format(file_name=file_name)
-                        print(f"📝 New caption: {replaced_caption}")  # Debug log
                         
-                        if buttons:
+                        replaced_caption = cap.format(file_name=file_name)
+                        print(f"📝 New caption: {replaced_caption}")
+                        
+                        if buttons and len(buttons) > 0:
+                            print(f"🔘 Applying {len(buttons)} button(s)")
                             reply_markup = types.InlineKeyboardMarkup(buttons)
-                            print(f"🔘 Buttons: {len(buttons)} button(s)")  # Debug log
                             await message.edit(replaced_caption, reply_markup=reply_markup)
                             print("✅ Caption and buttons edited successfully!")
                         else:
+                            print("ℹ️ No buttons to apply, editing caption only")
                             await message.edit(replaced_caption)
                             print("✅ Caption edited successfully!")
                     else:
                         replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name)
                         await message.edit(replaced_caption)
-                        print("✅ Default caption edited successfully!")
+                        print("✅ Default caption edited!")
                         
                 except FloodWait as e:
                     print(f"⏳ FloodWait: {e.x} seconds")
                     await asyncio.sleep(e.x)
                     continue
                 except Exception as e:
-                    # Ignore MESSAGE_NOT_MODIFIED error
                     if "MESSAGE_NOT_MODIFIED" in str(e):
                         print("ℹ️ Message already has same content, skipping...")
                     else:
-                        print(f"❌ Error in auto_edit_caption: {e}")
+                        print(f"❌ Error: {e}")
                     continue
     return
 
