@@ -21,11 +21,7 @@ async def main_menu_buttons():
         [
             types.InlineKeyboardButton("📝 Set Caption", callback_data="set_caption"),
             types.InlineKeyboardButton("📎 Add Button", callback_data="add_button")
-        ],
-        [
-            types.InlineKeyboardButton("🗑️ Remove Channel", callback_data="remove_channel"),
-            types.InlineKeyboardButton("📊 Status", callback_data="status")
-        ],
+        ], 
         [
             types.InlineKeyboardButton("📢 Main Channel", url="https://t.me/wolverine273"),
             types.InlineKeyboardButton("💬 Help Group", url="https://t.me/WOLVERIN_P")
