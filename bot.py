@@ -6,7 +6,43 @@ from aiohttp import web
 from pyrogram import Client
 from config import Rkn_Bots, Rkn_Bots as Rkn_Botz
 from Rkn_Bots.web_support import web_server
-from Rkn_Bots.logger import Logger
+
+# ✅ Logger ko import karo
+try:
+    from Rkn_Bots.logger import Logger
+except ImportError:
+    print("⚠️ Logger not found, creating dummy logger")
+    class Logger:
+        def __init__(self, bot):
+            self.bot = bot
+        async def bot_started(self):
+            print("🚀 Bot Started!")
+        async def bot_stopped(self):
+            print("🛑 Bot Stopped!")
+        async def user_start(self, *args, **kwargs):
+            pass
+        async def channel_setup(self, *args, **kwargs):
+            pass
+        async def channel_removed(self, *args, **kwargs):
+            pass
+        async def caption_set(self, *args, **kwargs):
+            pass
+        async def caption_deleted(self, *args, **kwargs):
+            pass
+        async def buttons_set(self, *args, **kwargs):
+            pass
+        async def buttons_removed(self, *args, **kwargs):
+            pass
+        async def caption_edited(self, *args, **kwargs):
+            pass
+        async def broadcast_started(self, *args, **kwargs):
+            pass
+        async def broadcast_completed(self, *args, **kwargs):
+            pass
+        async def admin_action(self, *args, **kwargs):
+            pass
+        async def system_error(self, *args, **kwargs):
+            pass
 
 class Rkn_AutoCaptionBot(Client):
     def __init__(self):
@@ -30,7 +66,10 @@ class Rkn_AutoCaptionBot(Client):
         self.logger = Logger(self)
         
         # 🟢 Send Bot Started Log to Channel
-        await self.logger.bot_started()
+        try:
+            await self.logger.bot_started()
+        except Exception as e:
+            print(f"⚠️ Bot start log error: {e}")
         
         # Force Sub Channel Setup
         if Rkn_Bots.FORCE_SUB:
@@ -69,7 +108,10 @@ class Rkn_AutoCaptionBot(Client):
     async def stop(self, *args):
         # 🟢 Send Bot Stopped Log
         if hasattr(self, 'logger'):
-            await self.logger.bot_stopped()
+            try:
+                await self.logger.bot_stopped()
+            except Exception as e:
+                print(f"⚠️ Bot stop log error: {e}")
         await super().stop()
         print("Bot Stopped 🙄")
         
