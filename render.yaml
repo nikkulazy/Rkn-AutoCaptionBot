@@ -25,3 +25,5 @@ services:
         sync: false
       - key: ADMIN
         sync: false
+      - key: LOG_CHANNEL
+        sync: false
