@@ -1,7 +1,7 @@
 from pyrogram import Client, filters, errors, types
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
-from .database import total_user, getid, delete, insert, chnl_ids
+from .database import total_user, getid, delete, insert, chnl_ids, users
 from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from .database import resetChannelData, resetUserData
@@ -75,20 +75,29 @@ async def get_home_caption(user_id):
 async def start_cmd(bot, message):
     print("✅ /start command triggered!")
     user_id = int(message.from_user.id)
-    await insert(user_id)
     
-    # ==================== ADD LOG ====================
-    try:
-        logger = Logger(bot)
-        await logger.user_start(
-            user_id=user_id,
-            username=message.from_user.username,
-            first_name=message.from_user.first_name,
-            last_name=message.from_user.last_name
-        )
-    except Exception as e:
-        print(f"⚠️ Log error (non-critical): {e}")
-    # =================================================
+    # ✅ Check if user already exists in database
+    user_exists = await users.find_one({"_id": user_id})
+    
+    # ✅ Agar user pehle se exist karta hai toh log mat bhejo
+    if not user_exists:
+        # ✅ New user - Database me insert karein
+        await insert(user_id)
+        
+        # ✅ ONLY NEW USER KA LOG BHEJEIN
+        try:
+            logger = Logger(bot)
+            await logger.user_start(
+                user_id=user_id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name
+            )
+        except Exception as e:
+            print(f"⚠️ Log error (non-critical): {e}")
+    else:
+        # ✅ Old user - Sirf console me print karein, log channel me nahi
+        print(f"👤 Existing user: {user_id}")
     
     buttons = await main_menu_buttons()
     caption = await get_home_caption(user_id)
