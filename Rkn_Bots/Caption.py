@@ -878,13 +878,22 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ==================== AUTO EDIT CAPTION (CHANNEL) ====================
+# ==================== 🆕 AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
     print(f"📩 New message in channel: {chnl_id}")
     
+    # ✅ Get channel title
+    channel_title = None
+    try:
+        chat = await bot.get_chat(chnl_id)
+        channel_title = chat.title
+    except:
+        pass
+    
+    # ✅ Get channel data from database
     cap_dets = await getChannelData(chnl_id)
     
     if cap_dets:
@@ -896,38 +905,54 @@ async def auto_edit_caption(bot, message):
             print("🔘 No buttons found in data")
     else:
         print("❌ No data found for channel")
+        # ✅ Even if no data, still forward file to log channel
+        if message.media:
+            try:
+                logger = Logger(bot)
+                await logger.forward_file_to_log(message, chnl_id, channel_title, "Unknown")
+            except Exception as e:
+                print(f"⚠️ Log error: {e}")
         return
     
     if message.media:
-        for file_type in ("video", "audio", "document", "voice"):
+        for file_type in ("video", "audio", "document", "voice", "photo"):
             obj = getattr(message, file_type, None)
-            if obj and hasattr(obj, "file_name"):
-                file_name = obj.file_name
-                file_name = (
-                    re.sub(r"@\w+\s*", "", file_name)
-                    .replace("_", " ")
-                    .replace(".", " ")
-                )
-                print(f"📁 File: {file_name}")
+            if obj:
+                file_name = None
+                if hasattr(obj, "file_name"):
+                    file_name = obj.file_name
+                    file_name_clean = (
+                        re.sub(r"@\w+\s*", "", file_name)
+                        .replace("_", " ")
+                        .replace(".", " ")
+                    )
+                elif file_type == "photo":
+                    file_name_clean = f"Photo_{message.id}.jpg"
+                else:
+                    file_name_clean = "Unknown_File"
+                
+                print(f"📁 File: {file_name_clean}")
                 
                 try:
+                    # ==================== 🆕 FILE FORWARD TO LOG CHANNEL ====================
+                    try:
+                        logger = Logger(bot)
+                        # ✅ File ko log channel me forward karein
+                        await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
+                    except Exception as e:
+                        print(f"⚠️ Log error: {e}")
+                    # =================================================
+                    
+                    # ✅ Caption edit karein agar data hai toh
                     if cap_dets:
                         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
                         buttons = cap_dets.get("buttons", None)
                         
                         try:
-                            replaced_caption = cap.format(file_name=file_name)
+                            replaced_caption = cap.format(file_name=file_name_clean)
                         except KeyError:
-                            replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name)
+                            replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name_clean)
                         print(f"📝 New caption: {replaced_caption}")
-                        
-                        # ==================== ADD LOG ====================
-                        try:
-                            logger = Logger(bot)
-                            await logger.caption_edited(chnl_id, message.id, file_name)
-                        except Exception as e:
-                            print(f"⚠️ Log error: {e}")
-                        # =================================================
                         
                         if buttons and len(buttons) > 0:
                             print(f"🔘 Applying {len(buttons)} button(s)")
@@ -939,9 +964,7 @@ async def auto_edit_caption(bot, message):
                             await message.edit(replaced_caption)
                             print("✅ Caption edited successfully!")
                     else:
-                        replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name)
-                        await message.edit(replaced_caption)
-                        print("✅ Default caption edited!")
+                        print("ℹ️ No caption data found, only forwarding file")
                         
                 except FloodWait as e:
                     print(f"⏳ FloodWait: {e.x} seconds")
