@@ -64,7 +64,7 @@ async def restart_bot(b, m):
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-# ==================== START COMMAND (FIXED) ====================
+# ==================== START COMMAND ====================
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_cmd(bot, message):
@@ -119,8 +119,12 @@ async def setChannel(bot, message):
     
     if chkData:
         await chnl_ids.update_one({"user_id": user_id}, {"$set": {"chnl_id": channel_id}})
+        # Also update in channel-based search
+        await chnl_ids.update_one({"chnl_id": channel_id}, {"$set": {"user_id": user_id}}, upsert=True)
     else:
         await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+        # Also add channel-based entry
+        await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     await message.reply(
         f"✅ **Channel Set Successfully!**\n\n"
@@ -130,6 +134,42 @@ async def setChannel(bot, message):
         f"• `/set_buttons` - Set buttons\n"
         f"• `/status` - View settings"
     )
+
+
+# ==================== SET CAPTION ====================
+
+@Client.on_message(filters.private & filters.command("set_caption"))
+async def setCaption(bot, message):
+    print("✅ /set_caption command triggered!")
+    user_id = message.from_user.id
+    
+    if len(message.command) < 2:
+        return await message.reply(
+            "❌ **Please provide caption!**\n\n"
+            "**Usage:** `/set_caption Your caption here {file_name}`\n\n"
+            "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
+            "**{file_name}** - Shows original file name"
+        )
+    
+    caption = message.text.split(" ", 1)[1]
+    
+    chkData = await getChannelDataByUser(user_id)
+    
+    if chkData:
+        chnl_id = chkData.get("chnl_id")
+        await updateCapByUser(user_id, caption)
+        # Also update channel-based entry
+        await updateCap(chnl_id, caption)
+        return await message.reply(
+            f"✅ **Caption Updated Successfully!**\n\n"
+            f"**Your New Caption:**\n`{caption}`"
+        )
+    else:
+        return await message.reply(
+            "❌ **No channel found!**\n\n"
+            "Please set your channel ID first:\n"
+            "`/set_channel -1001234567890`"
+        )
 
 
 # ==================== SET BUTTONS ====================
@@ -177,7 +217,10 @@ async def setButtons(bot, message):
             "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`"
         )
     
+    chnl_id = chkData.get("chnl_id")
     await updateButtonsByUser(user_id, buttons_data)
+    # Also update channel-based entry
+    await updateButtons(chnl_id, buttons_data)
     
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
@@ -224,7 +267,10 @@ async def removeButtons(bot, message):
     if "buttons" not in chkData or not chkData["buttons"]:
         return await message.reply("❌ No buttons are currently set!")
     
+    chnl_id = chkData.get("chnl_id")
     await deleteButtonsByUser(user_id)
+    await deleteButtons(chnl_id)
+    
     await message.reply(
         "✅ **Buttons Removed Successfully!**\n"
         "Now no buttons will be shown with captions."
@@ -242,44 +288,14 @@ async def delCaption(bot, message):
     if not chkData:
         return await message.reply("❌ No data found for your channel!")
     
+    chnl_id = chkData.get("chnl_id")
     await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
+    await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
+    
     await message.reply(
         "✅ **Caption Deleted Successfully!**\n"
         f"Now I will use default caption."
     )
-
-
-# ==================== SET CAPTION ====================
-
-@Client.on_message(filters.private & filters.command("set_caption"))
-async def setCaption(bot, message):
-    print("✅ /set_caption command triggered!")
-    user_id = message.from_user.id
-    
-    if len(message.command) < 2:
-        return await message.reply(
-            "❌ **Please provide caption!**\n\n"
-            "**Usage:** `/set_caption Your caption here {file_name}`\n\n"
-            "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
-            "**{file_name}** - Shows original file name"
-        )
-    
-    caption = message.text.split(" ", 1)[1]
-    
-    chkData = await getChannelDataByUser(user_id)
-    
-    if chkData:
-        await updateCapByUser(user_id, caption)
-        return await message.reply(
-            f"✅ **Caption Updated Successfully!**\n\n"
-            f"**Your New Caption:**\n`{caption}`"
-        )
-    else:
-        return await message.reply(
-            "❌ **No channel found!**\n\n"
-            "Please set your channel ID first:\n"
-            "`/set_channel -1001234567890`"
-        )
 
 
 # ==================== STATUS ====================
@@ -317,7 +333,11 @@ async def status(bot, message):
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
+    print(f"📩 New message in channel: {chnl_id}")  # Debug log
+    
+    # Get channel data
     cap_dets = await getChannelData(chnl_id)
+    print(f"📊 Channel data: {cap_dets}")  # Debug log
     
     if message.media:
         for file_type in ("video", "audio", "document", "voice"):
@@ -329,40 +349,38 @@ async def auto_edit_caption(bot, message):
                     .replace("_", " ")
                     .replace(".", " ")
                 )
+                print(f"📁 File: {file_name}")  # Debug log
+                
                 try:
                     if cap_dets:
                         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
                         buttons = cap_dets.get("buttons", None)
                         replaced_caption = cap.format(file_name=file_name)
+                        print(f"📝 New caption: {replaced_caption}")  # Debug log
                         
                         if buttons:
                             reply_markup = types.InlineKeyboardMarkup(buttons)
-                            # Check if caption already has same content
-                            if message.caption != replaced_caption or message.reply_markup != reply_markup:
-                                await message.edit(replaced_caption, reply_markup=reply_markup)
-                            else:
-                                # Skip if same content
-                                pass
+                            print(f"🔘 Buttons: {len(buttons)} button(s)")  # Debug log
+                            await message.edit(replaced_caption, reply_markup=reply_markup)
+                            print("✅ Caption and buttons edited successfully!")
                         else:
-                            if message.caption != replaced_caption:
-                                await message.edit(replaced_caption)
-                            else:
-                                # Skip if same caption
-                                pass
+                            await message.edit(replaced_caption)
+                            print("✅ Caption edited successfully!")
                     else:
                         replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name)
-                        if message.caption != replaced_caption:
-                            await message.edit(replaced_caption)
-                        else:
-                            # Skip if same caption
-                            pass
+                        await message.edit(replaced_caption)
+                        print("✅ Default caption edited successfully!")
+                        
                 except FloodWait as e:
+                    print(f"⏳ FloodWait: {e.x} seconds")
                     await asyncio.sleep(e.x)
                     continue
                 except Exception as e:
                     # Ignore MESSAGE_NOT_MODIFIED error
-                    if "MESSAGE_NOT_MODIFIED" not in str(e):
-                        print(f"Error in auto_edit_caption: {e}")
+                    if "MESSAGE_NOT_MODIFIED" in str(e):
+                        print("ℹ️ Message already has same content, skipping...")
+                    else:
+                        print(f"❌ Error in auto_edit_caption: {e}")
                     continue
     return
 
