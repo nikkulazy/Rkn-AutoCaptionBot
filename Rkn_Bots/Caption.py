@@ -215,7 +215,8 @@ async def callback_handler(bot, callback_query):
         channel_data = await getChannelData(chnl_id)
         
         if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
-            buttons = await button_page_buttons()
+            # ✅ SIRF BACK BUTTON - Remove Button HATAYA
+            buttons = await back_button_only()
             await callback_query.message.edit_caption(
                 caption=f"❌ **No buttons to remove!**\n\n"
                 f"Use `/set_buttons` to add buttons first.",
@@ -440,7 +441,7 @@ async def removeButtons(bot, message):
     channel_data = await getChannelData(chnl_id)
     
     if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
-        buttons = await button_page_buttons()
+        buttons = await back_button_only()
         return await message.reply("❌ No buttons are currently set!", reply_markup=buttons)
     
     await deleteButtonsByUser(user_id)
