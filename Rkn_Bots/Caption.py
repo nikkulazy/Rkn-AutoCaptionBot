@@ -8,6 +8,7 @@ import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids
 from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
+from .database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
 
 print("🔄 Loading Caption.py...")
@@ -64,6 +65,16 @@ async def restart_bot(b, m):
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
+# ==================== ADMIN COMMAND - RESET DATABASE ====================
+
+@Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("reset_db"))
+async def reset_db(bot, message):
+    print("🔄 Resetting database...")
+    user_id = message.from_user.id
+    await resetUserData(user_id)
+    await message.reply("✅ Database reset for your channel! Please set up again.\n\n`/set_channel -1001234567890`")
+
+
 # ==================== START COMMAND ====================
 
 @Client.on_message(filters.command("start") & filters.private)
@@ -81,7 +92,8 @@ async def start_cmd(bot, message):
         f"👁️ `/view_buttons` - View buttons\n"
         f"🗑️ `/remove_buttons` - Remove buttons\n"
         f"❌ `/delcaption` - Delete caption\n"
-        f"📊 `/status` - Check settings",
+        f"📊 `/status` - Check settings\n"
+        f"🔄 `/reset_db` - Reset database (Admin only)",
         reply_markup=types.InlineKeyboardMarkup([
             [
                 types.InlineKeyboardButton('📢 Main Channel', url='https://t.me/wolverine273'),
@@ -115,14 +127,13 @@ async def setChannel(bot, message):
     except:
         return await message.reply("❌ Invalid channel ID! Must be a number.")
     
-    chkData = await getChannelDataByUser(user_id)
+    # Reset existing data first
+    await resetChannelData(channel_id)
+    await resetUserData(user_id)
     
-    if chkData:
-        await chnl_ids.update_one({"user_id": user_id}, {"$set": {"chnl_id": channel_id}})
-        await chnl_ids.update_one({"chnl_id": channel_id}, {"$set": {"user_id": user_id}}, upsert=True)
-    else:
-        await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
-        await addCap(channel_id, Rkn_Bots.DEF_CAP)
+    # Create fresh data
+    await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+    await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
     await message.reply(
         f"✅ **Channel Set Successfully!**\n\n"
@@ -219,17 +230,25 @@ async def setButtons(bot, message):
         )
     
     chnl_id = chkData.get("chnl_id")
+    print(f"📌 Channel ID: {chnl_id}")
+    print(f"📌 Buttons to save: {buttons_data}")
     
     # Save buttons - BOTH ways
     await updateButtonsByUser(user_id, buttons_data)
     await updateButtons(chnl_id, buttons_data)
+    
+    # Verify save
+    verify_data = await getChannelData(chnl_id)
+    saved_buttons = verify_data.get("buttons", [])
+    print(f"✅ Verification: {len(saved_buttons)} buttons saved")
     
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
     await message.reply(
         f"✅ **Buttons Set Successfully!**\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
-        f"**Total:** `{len(buttons_data)}` button(s)\n\n"
+        f"**Total:** `{len(buttons_data)}` button(s)\n"
+        f"**Verified in DB:** `{len(saved_buttons)}` button(s)\n\n"
         f"📌 Now post a file in your channel to see buttons!",
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
@@ -349,6 +368,7 @@ async def auto_edit_caption(bot, message):
             print("🔘 No buttons found in data")
     else:
         print("❌ No data found for channel")
+        return
     
     if message.media:
         for file_type in ("video", "audio", "document", "voice"):
