@@ -7,7 +7,9 @@
 from pyrogram import Client, filters, errors, types
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
-from .database import total_user, getid, delete, addCap, updateCap, insert, chnl_ids, updateButtons, deleteButtons, getChannelData
+from .database import total_user, getid, delete, insert, chnl_ids
+from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
+from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from pyrogram.errors import FloodWait
 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["rknusers"]))
@@ -115,8 +117,7 @@ async def setCaption(bot, message):
     
     caption = message.text.split(" ", 1)[1]
     
-    # Check if user has any channel setup
-    chkData = await chnl_ids.find_one({"user_id": user_id})
+    chkData = await getChannelDataByUser(user_id)
     
     if chkData:
         await updateCapByUser(user_id, caption)
@@ -154,8 +155,7 @@ async def setButtons(bot, message):
             "⚠️ URL must start with https:// or http://"
         )
     
-    # Check if user has channel setup
-    chkData = await chnl_ids.find_one({"user_id": user_id})
+    chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
             "❌ **No channel found!**\n\n"
@@ -164,13 +164,11 @@ async def setButtons(bot, message):
             "Get your channel ID from @MissRose_bot"
         )
     
-    # Parse buttons from command
     buttons_text = message.text.split(" ", 1)[1]
     
     if not buttons_text:
         return await message.reply("❌ Please provide buttons data!")
     
-    # Parse buttons: text:url | text:url
     buttons_data = []
     for btn in buttons_text.split("|"):
         btn = btn.strip()
@@ -188,10 +186,8 @@ async def setButtons(bot, message):
     if not buttons_data:
         return await message.reply("❌ No valid buttons found!\n\nFormat: `[text]:[url] | [text]:[url]`")
     
-    # Update buttons for user
     await updateButtonsByUser(user_id, buttons_data)
     
-    # Preview buttons
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
     await message.reply(
@@ -209,7 +205,7 @@ async def setButtons(bot, message):
 async def removeButtons(bot, message):
     user_id = message.from_user.id
     
-    chkData = await chnl_ids.find_one({"user_id": user_id})
+    chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply("❌ No data found for your channel!")
     
@@ -229,7 +225,7 @@ async def removeButtons(bot, message):
 async def viewButtons(bot, message):
     user_id = message.from_user.id
     
-    chkData = await chnl_ids.find_one({"user_id": user_id})
+    chkData = await getChannelDataByUser(user_id)
     if not chkData or "buttons" not in chkData or not chkData["buttons"]:
         return await message.reply("❌ No buttons set for your channel!")
     
@@ -249,11 +245,11 @@ async def viewButtons(bot, message):
 async def delCaption(bot, message):
     user_id = message.from_user.id
     
-    chkData = await chnl_ids.find_one({"user_id": user_id})
+    chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply("❌ No data found for your channel!")
     
-    await chnl_ids.update_one({"user_id": user_id}, {"$set": {"caption": Rkn_Bots.DEF_CAP}})
+    await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
     await message.reply(
         "✅ **Caption Deleted Successfully!**\n"
         f"Now I will use default caption:\n`{Rkn_Bots.DEF_CAP}`"
@@ -284,8 +280,7 @@ async def setChannel(bot, message):
     except:
         return await message.reply("❌ Invalid channel ID! Must be a number.")
     
-    # Check if user already has data
-    chkData = await chnl_ids.find_one({"user_id": user_id})
+    chkData = await getChannelDataByUser(user_id)
     
     if chkData:
         await chnl_ids.update_one({"user_id": user_id}, {"$set": {"chnl_id": channel_id}})
@@ -309,7 +304,6 @@ async def setChannel(bot, message):
 @Client.on_callback_query()
 async def callback_handler(bot, callback_query):
     data = callback_query.data
-    user_id = callback_query.from_user.id
     
     if data == "set_caption":
         await callback_query.message.edit(
@@ -430,7 +424,6 @@ async def callback_handler(bot, callback_query):
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
     
-    # Find user by channel ID
     cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
     
     if message.media:
@@ -467,25 +460,6 @@ async def auto_edit_caption(bot, message):
                     print(f"Error in auto_edit_caption: {e}")
                     continue
     return
-
-
-# ==================== DATABASE FUNCTIONS FOR USER ====================
-
-# These functions use user_id instead of channel_id
-async def addCapByUser(user_id, chnl_id, caption, buttons=None):
-    dets = {"user_id": user_id, "chnl_id": chnl_id, "caption": caption}
-    if buttons:
-        dets["buttons"] = buttons
-    await chnl_ids.insert_one(dets)
-
-async def updateCapByUser(user_id, caption):
-    await chnl_ids.update_one({"user_id": user_id}, {"$set": {"caption": caption}})
-
-async def updateButtonsByUser(user_id, buttons):
-    await chnl_ids.update_one({"user_id": user_id}, {"$set": {"buttons": buttons}})
-
-async def deleteButtonsByUser(user_id):
-    await chnl_ids.update_one({"user_id": user_id}, {"$unset": {"buttons": ""}})
 
 # Rkn Developer 
 # Don't Remove Credit 😔
