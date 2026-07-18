@@ -6,6 +6,7 @@ from .database import addCap, updateCap, updateButtons, deleteButtons, getChanne
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from .database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
+from .logger import Logger
 
 print("🔄 Loading Caption.py...")
 
