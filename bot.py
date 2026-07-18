@@ -6,7 +6,6 @@ from aiohttp import web
 from pyrogram import Client
 from config import Rkn_Bots, Rkn_Bots as Rkn_Botz
 from Rkn_Bots.web_support import web_server
-from Rkn_Bots.database import fixChannelData
 
 class Rkn_AutoCaptionBot(Client):
     def __init__(self):
@@ -22,12 +21,6 @@ class Rkn_AutoCaptionBot(Client):
 
     async def start(self):
         await super().start()
-        
-        # Run database cleanup
-        print("🔄 Running database cleanup...")
-        await fixChannelData()
-        print("✅ Database cleanup complete!")
-        
         me = await self.get_me()
         self.uptime = Rkn_Botz.BOT_UPTIME
         self.force_channel = Rkn_Bots.FORCE_SUB
