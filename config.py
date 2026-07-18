@@ -37,7 +37,7 @@ class Rkn_Bots(object):
 
     # admin id  ( required.. 😥)
     ADMIN = [int(admin) if id_pattern.search(admin) else admin for admin in os.environ.get('ADMIN', '5346278816').split()]
-    
+    LOG_CHANNEL = os.environ.get("LOG_CHANNEL", "-1002126954277")  #
 
 # Rkn Developer 
 # Don't Remove Credit 😔
