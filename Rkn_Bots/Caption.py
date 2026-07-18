@@ -1,7 +1,3 @@
-# (c) @RknDeveloperr
-# Rkn Developer 
-# Don't Remove Credit 😔
-
 from pyrogram import Client, filters, errors, types
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
@@ -828,5 +824,3 @@ async def reset_db(bot, message):
     await message.reply("✅ Database reset for your channel! Please set up again.\n\n`/set_channel -1001234567890`")
 
 print("✅ Caption.py loaded successfully!")
-# Rkn Developer 
-# Don't Remove Credit 😔
