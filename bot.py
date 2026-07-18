@@ -1,13 +1,12 @@
 # (c) @RknDeveloperr
 # Rkn Developer 
 # Don't Remove Credit 😔
-# Telegram Channel @RknDeveloper & @Rkn_Bots
-# Developer @RknDeveloperr
 
 from aiohttp import web
 from pyrogram import Client
 from config import Rkn_Bots, Rkn_Bots as Rkn_Botz
 from Rkn_Bots.web_support import web_server
+from Rkn_Bots.database import fixChannelData
 
 class Rkn_AutoCaptionBot(Client):
     def __init__(self):
@@ -23,6 +22,12 @@ class Rkn_AutoCaptionBot(Client):
 
     async def start(self):
         await super().start()
+        
+        # Run database cleanup
+        print("🔄 Running database cleanup...")
+        await fixChannelData()
+        print("✅ Database cleanup complete!")
+        
         me = await self.get_me()
         self.uptime = Rkn_Botz.BOT_UPTIME
         self.force_channel = Rkn_Bots.FORCE_SUB
@@ -41,7 +46,7 @@ class Rkn_AutoCaptionBot(Client):
         print(f"{me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️")
         for id in Rkn_Bots.ADMIN:
             try:
-                await self.send_message(id, f"**__{me.first_name}  Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️__**")
+                await self.send_message(id, f"**__{me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️__**")
             except:
                 pass
         
@@ -53,5 +58,3 @@ Rkn_AutoCaptionBot().run()
 
 # Rkn Developer 
 # Don't Remove Credit 😔
-# Telegram Channel @RknDeveloper & @Rkn_Bots
-# Developer @RknDeveloperr
