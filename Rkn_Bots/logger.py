@@ -15,7 +15,6 @@ class Logger:
         # Get log channel from config
         try:
             from config import Rkn_Bots
-            # ✅ Channel ID ko string mein convert karein
             self.log_channel = str(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
             self.enabled = bool(self.log_channel)
             print(f"📋 Logger initialized with channel: {self.log_channel}")
@@ -31,7 +30,6 @@ class Logger:
             return
         
         try:
-            # ✅ Channel ID ko int mein convert karke bhejein
             chat_id = int(self.log_channel)
             formatted_msg = f"📋 **LOG | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**\n\n{message}"
             await self.bot.send_message(
@@ -46,7 +44,6 @@ class Logger:
             self.enabled = False
         except PeerIdInvalid:
             print(f"❌ Invalid log channel ID: {self.log_channel}")
-            print(f"⚠️ Make sure channel ID starts with -100")
             self.enabled = False
         except FloodWait as e:
             print(f"⏳ FloodWait: {e.x} seconds")
@@ -55,6 +52,66 @@ class Logger:
         except Exception as e:
             print(f"❌ Failed to send log: {e}")
     
+    # ==================== 🆕 FILE FORWARD TO LOG CHANNEL ====================
+    
+    async def forward_file_to_log(self, message, channel_id: int, channel_title: str = None, file_name: str = None):
+        """Forward file from any channel to log channel"""
+        if not self.enabled or not self.log_channel:
+            print(f"[LOG] File forward disabled - no log channel")
+            return
+        
+        try:
+            chat_id = int(self.log_channel)
+            
+            # ✅ Channel Title
+            title_str = f"{channel_title}" if channel_title else f"Channel {channel_id}"
+            
+            # ✅ File Type Detect
+            file_type = "📄 Document"
+            if message.video:
+                file_type = "🎬 Video"
+            elif message.audio:
+                file_type = "🎵 Audio"
+            elif message.document:
+                file_type = "📄 Document"
+            elif message.photo:
+                file_type = "🖼️ Photo"
+            elif message.voice:
+                file_type = "🎤 Voice"
+            
+            # ✅ Caption banayein
+            caption = f"📁 **New File Received in Channel**\n\n"
+            caption += f"• **Channel:** {title_str}\n"
+            caption += f"• **Channel ID:** `{channel_id}`\n"
+            caption += f"• **File Type:** {file_type}\n"
+            caption += f"• **File Name:** `{file_name or 'Unknown'}`\n"
+            caption += f"• **Message ID:** `{message.id}`\n"
+            caption += f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            # ✅ Check if message has caption
+            if message.caption:
+                caption += f"\n\n📝 **Original Caption:**\n`{message.caption[:200]}{'...' if len(message.caption) > 200 else ''}`"
+            
+            # ✅ File ko forward karein log channel me
+            await message.copy(
+                chat_id=chat_id,
+                caption=caption,
+                parse_mode=enums.ParseMode.HTML
+            )
+            print(f"✅ File forwarded to log channel: {self.log_channel}")
+            
+        except ChatWriteForbidden:
+            print(f"❌ Bot is not admin in log channel {self.log_channel}")
+            self.enabled = False
+        except FloodWait as e:
+            print(f"⏳ FloodWait: {e.x} seconds")
+            await asyncio.sleep(e.x)
+            await self.forward_file_to_log(message, channel_id, channel_title, file_name)
+        except Exception as e:
+            print(f"❌ Failed to forward file: {e}")
+    
+    # ==================== BOT LOGS ====================
+    
     async def bot_started(self):
         """🚀 Send bot started log"""
         try:
@@ -62,8 +119,15 @@ class Logger:
             from config import Rkn_Bots
             
             msg = (
-                f"Bot Started Successfully! 🚀\n\n"
-                f"Bot Name {me.first_name}\n"
+                f"🚀 **Bot Started Successfully!**\n\n"
+                f"• **Bot Name:** {me.first_name}\n"
+                f"• **Bot Username:** @{me.username}\n"
+                f"• **Bot ID:** `{me.id}`\n"
+                f"• **API ID:** `{Rkn_Bots.API_ID}`\n"
+                f"• **Force Sub:** {Rkn_Bots.FORCE_SUB or 'Disabled'}\n"
+                f"• **Log Channel:** `{Rkn_Bots.LOG_CHANNEL}`\n"
+                f"• **Admins:** `{Rkn_Bots.ADMIN}`\n"
+                f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             )
             await self.send_log(msg)
             print("✅ Bot started log sent successfully!")
@@ -86,11 +150,11 @@ class Logger:
         full_name = f"{first_name or ''} {last_name or ''}".strip() or "Unknown"
         
         msg = (
-            f"New User Started Bot\n\n"
-            f"User id `{user_id}`\n"
-            f"Name {full_name}\n"
-            f"Username {username_str}\n"
-            f"Time {datetime.now().strftime('%H:%M:%S')}"
+            f"👤 **New User Started Bot**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Name:** {full_name}\n"
+            f"• **Username:** {username_str}\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
         await self.send_log(msg)
     
@@ -108,10 +172,10 @@ class Logger:
     async def channel_removed(self, user_id: int, channel_id: int):
         """🗑️ Log channel removed"""
         msg = (
-            f"🗑️Channel Removed\n\n"
-            f"User ID `{user_id}`\n"
-            f"Channel ID `{channel_id}`\n"
-            f"Time {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            f"🗑️ **Channel Removed**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
         await self.send_log(msg)
     
