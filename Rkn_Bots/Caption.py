@@ -1,4 +1,4 @@
-from pyrogram import Client, filters, errors, types
+from pyrogram import Client, filters, errors, types, enums
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids, users
@@ -59,26 +59,12 @@ async def check_bot_admin(bot, channel_id):
     """Check if bot is admin in the channel"""
     try:
         chat_member = await bot.get_chat_member(channel_id, (await bot.get_me()).id)
-        if chat_member.status in [types.ChatMemberStatus.ADMINISTRATOR, types.ChatMemberStatus.OWNER]:
+        if chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]:
             return True
         return False
     except Exception as e:
         print(f"❌ Bot admin check failed: {e}")
         return False
-
-# ==================== GET USER ID FROM MESSAGE ====================
-
-def get_user_id_from_message(message):
-    """Get user ID from message (works for both private and channel messages)"""
-    # Agar private message hai
-    if message.from_user:
-        return message.from_user.id
-    # Agar channel message hai (sender_chat se)
-    elif message.sender_chat:
-        # Channel ke case mein, sender_chat channel hai, user nahi
-        # Hum user ID nahi nikal sakte, isliye channel ID use karte hain
-        return None
-    return None
 
 # ==================== START COMMAND ====================
 
@@ -87,15 +73,10 @@ async def start_cmd(bot, message):
     print("✅ /start command triggered!")
     user_id = int(message.from_user.id)
     
-    # ✅ Check if user already exists in database
     user_exists = await users.find_one({"_id": user_id})
     
-    # ✅ Agar user pehle se exist karta hai toh log mat bhejo
     if not user_exists:
-        # ✅ New user - Database me insert karein
         await insert(user_id)
-        
-        # ✅ ONLY NEW USER KA LOG BHEJEIN
         try:
             logger = Logger(bot)
             await logger.user_start(
@@ -107,7 +88,6 @@ async def start_cmd(bot, message):
         except Exception as e:
             print(f"⚠️ Log error (non-critical): {e}")
     else:
-        # ✅ Old user - Sirf console me print karein, log channel me nahi
         print(f"👤 Existing user: {user_id}")
     
     buttons = await main_menu_buttons()
@@ -126,26 +106,21 @@ async def callback_handler(bot, callback_query):
     user_id = callback_query.from_user.id
     data = callback_query.data
     
-    # ==================== ADD LOGGER ====================
     try:
         logger = Logger(bot)
     except Exception as e:
         print(f"⚠️ Logger error: {e}")
         logger = None
-    # ===================================================
     
-    # ✅ CHECK IF MESSAGE EXISTS
     if not callback_query.message:
         await callback_query.answer("Message not found!")
         return
     
-    # ✅ OLD MESSAGE DELETE KARO
     try:
         await callback_query.message.delete()
     except:
         pass
     
-    # ========== BACK TO MENU ==========
     if data == "back_to_menu":
         buttons = await main_menu_buttons()
         caption = await get_home_caption(user_id)
@@ -164,7 +139,6 @@ async def callback_handler(bot, callback_query):
         await callback_query.answer()
         return
     
-    # ========== SET CAPTION INFO ==========
     elif data == "set_caption":
         buttons = await back_button_only()
         await callback_query.message.reply_text(
@@ -182,7 +156,6 @@ async def callback_handler(bot, callback_query):
         )
         await callback_query.answer()
     
-    # ========== ADD BUTTON INFO ==========
     elif data == "add_button":
         buttons = await back_button_only()
         await callback_query.message.reply_text(
@@ -200,10 +173,25 @@ async def callback_handler(bot, callback_query):
         )
         await callback_query.answer()
 
-# ==================== AUTO SET CHANNEL FUNCTION ====================
+# ==================== CHECK CHANNEL OWNER/ADMIN ====================
+
+async def get_channel_owner_or_admin(bot, channel_id):
+    """Get the owner or admin of a channel"""
+    try:
+        # Try to get channel admins
+        admins = await bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
+        async for admin in admins:
+            if admin.user and not admin.user.is_bot:
+                return admin.user.id
+    except Exception as e:
+        print(f"⚠️ Could not get channel admins: {e}")
+    
+    return None
+
+# ==================== AUTO SET CHANNEL WITH OWNER DETECTION ====================
 
 async def auto_set_channel(bot, message):
-    """Auto set channel when user sends command in channel"""
+    """Auto set channel when user sends command in channel - detects channel owner/admin"""
     channel_id = message.chat.id
     
     # ✅ Check if bot is admin in channel
@@ -220,27 +208,29 @@ async def auto_set_channel(bot, message):
         )
         return None
     
-    # ✅ Get user ID - channel mein sender_chat use karo
+    # ✅ Get user ID - channel ke owner/admin ko detect karo
     user_id = None
     
-    # Agar message reply hai toh usme se user ID lo
+    # Method 1: Agar message reply hai toh usme se user ID lo
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
-    # Agar message ka sender_chat hai toh usme se channel ID lo
-    elif message.sender_chat:
-        # Sender chat channel hai, user ID nahi milega
-        # Isliye hum message ke channel ki ID use karte hain
-        # Aur user ko database mein channel ID se map karte hain
-        pass
     
-    # Agar user_id nahi mila toh message.chat.id use karo
-    # Kyunki channel anonymous hai, user ki jagah channel ID use karenge
+    # Method 2: Agar sender_chat hai toh usme se user ID nikaalo
+    if not user_id and message.sender_chat:
+        # Channel owner/admin dhundho
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+            print(f"👤 Found channel owner/admin: {user_id}")
+    
+    # Method 3: Agar kisi bhi tarah user ID nahi mili toh channel ID hi use karo
     if not user_id:
-        user_id = channel_id  # Channel ID ko user ID ki tarah use karo
+        user_id = channel_id
+        print(f"⚠️ Using channel ID as user ID: {user_id}")
     
-    print(f"👤 User/Channel ID: {user_id}")
+    print(f"👤 Final User ID: {user_id}")
     
-    # ✅ Check if channel already exists for this user
+    # ✅ Check if channel already exists
     chkData = await getChannelDataByUser(user_id)
     
     if chkData and chkData.get("chnl_id") == channel_id:
@@ -264,13 +254,12 @@ async def auto_set_channel(bot, message):
     except:
         pass
     
-    # ==================== ADD LOG ====================
+    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.channel_setup(user_id, channel_id, channel_title)
     except Exception as e:
         print(f"⚠️ Log error: {e}")
-    # =================================================
     
     print(f"✅ Channel {channel_id} auto-set for user {user_id}")
     
@@ -292,7 +281,7 @@ async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
     
     # ✅ Agar private me command aayi hai toh guide karo
-    if message.chat.type == types.ChatType.PRIVATE:
+    if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
             f"❌ **Please use this command in your channel!**\n\n"
@@ -315,15 +304,23 @@ async def setCaption(bot, message):
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
-        # Bot admin nahi hai ya error aaya
         return
     
-    # ✅ User ID nikaalo
-    user_id = channel_id  # Channel ID ko user ID ki tarah use karo (kyunki anonymous hai)
+    # ✅ User ID nikaalo (channel owner/admin)
+    user_id = None
     
-    # Agar reply hai toh usme se user ID lo
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+    
+    if not user_id:
+        user_id = channel_id
+    
+    print(f"👤 User ID for caption: {user_id}")
     
     # ✅ Check if caption provided
     if len(message.command) < 2:
@@ -341,13 +338,12 @@ async def setCaption(bot, message):
     await updateCapByUser(user_id, caption)
     await updateCap(channel_id, caption)
     
-    # ==================== ADD LOG ====================
+    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.caption_set(user_id, channel_id, caption)
     except Exception as e:
         print(f"⚠️ Log error: {e}")
-    # =================================================
     
     await message.reply_text(
         f"✅ **Caption Updated Successfully!**\n\n"
@@ -362,7 +358,7 @@ async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     
     # ✅ Agar private me command aayi hai toh guide karo
-    if message.chat.type == types.ChatType.PRIVATE:
+    if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
             f"❌ **Please use this command in your channel!**\n\n"
@@ -388,10 +384,20 @@ async def setButtons(bot, message):
         return
     
     # ✅ User ID nikaalo
-    user_id = channel_id  # Channel ID ko user ID ki tarah use karo
+    user_id = None
     
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+    
+    if not user_id:
+        user_id = channel_id
+    
+    print(f"👤 User ID for buttons: {user_id}")
     
     if len(message.command) < 2:
         await message.reply_text(
@@ -434,13 +440,11 @@ async def setButtons(bot, message):
     await updateButtons(channel_id, buttons_data)
     await updateButtonsByUser(user_id, buttons_data)
     
-    # ==================== ADD LOG ====================
     try:
         logger = Logger(bot)
         await logger.buttons_set(user_id, channel_id, len(buttons_data))
     except Exception as e:
         print(f"⚠️ Log error: {e}")
-    # =================================================
     
     verify_data = await getChannelData(channel_id)
     saved_buttons = verify_data.get("buttons", [])
@@ -463,8 +467,7 @@ async def setButtons(bot, message):
 async def delCaption(bot, message):
     print("✅ /delcaption command triggered!")
     
-    # ✅ Agar private me command aayi hai toh guide karo
-    if message.chat.type == types.ChatType.PRIVATE:
+    if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
             f"❌ **Please use this command in your channel!**\n\n"
@@ -478,17 +481,23 @@ async def delCaption(bot, message):
     except:
         pass
     
-    # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
     
-    # ✅ User ID nikaalo
-    user_id = channel_id
+    user_id = None
     
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+    
+    if not user_id:
+        user_id = channel_id
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
@@ -497,13 +506,11 @@ async def delCaption(bot, message):
     await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
     await updateCap(channel_id, Rkn_Bots.DEF_CAP)
     
-    # ==================== ADD LOG ====================
     try:
         logger = Logger(bot)
         await logger.caption_deleted(user_id, channel_id)
     except Exception as e:
         print(f"⚠️ Log error: {e}")
-    # =================================================
     
     await message.reply_text(
         f"✅ **Caption Deleted Successfully!**\n\n"
@@ -518,8 +525,7 @@ async def delCaption(bot, message):
 async def removeButtons(bot, message):
     print("✅ /remove_buttons command triggered!")
     
-    # ✅ Agar private me command aayi hai toh guide karo
-    if message.chat.type == types.ChatType.PRIVATE:
+    if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
             f"❌ **Please use this command in your channel!**\n\n"
@@ -533,17 +539,23 @@ async def removeButtons(bot, message):
     except:
         pass
     
-    # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
     
-    # ✅ User ID nikaalo
-    user_id = channel_id
+    user_id = None
     
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+    
+    if not user_id:
+        user_id = channel_id
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
@@ -557,13 +569,11 @@ async def removeButtons(bot, message):
     await deleteButtonsByUser(user_id)
     await deleteButtons(channel_id)
     
-    # ==================== ADD LOG ====================
     try:
         logger = Logger(bot)
         await logger.buttons_removed(user_id, channel_id)
     except Exception as e:
         print(f"⚠️ Log error: {e}")
-    # =================================================
     
     await message.reply_text(
         f"✅ **Buttons Removed Successfully!**\n\n"
@@ -654,7 +664,6 @@ async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
     print(f"📩 New message in channel: {chnl_id}")
     
-    # ✅ Get channel title
     channel_title = None
     try:
         chat = await bot.get_chat(chnl_id)
@@ -662,7 +671,6 @@ async def auto_edit_caption(bot, message):
     except:
         pass
     
-    # ✅ Get channel data from database
     cap_dets = await getChannelData(chnl_id)
     
     if cap_dets:
@@ -674,7 +682,6 @@ async def auto_edit_caption(bot, message):
             print("🔘 No buttons found in data")
     else:
         print("❌ No data found for channel")
-        # ✅ Even if no data, still forward file to log channel
         if message.media:
             try:
                 logger = Logger(bot)
@@ -703,15 +710,12 @@ async def auto_edit_caption(bot, message):
                 print(f"📁 File: {file_name_clean}")
                 
                 try:
-                    # ==================== FILE FORWARD TO LOG CHANNEL ====================
                     try:
                         logger = Logger(bot)
                         await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
-                    # =================================================
                     
-                    # ✅ Caption edit karein agar data hai toh
                     if cap_dets:
                         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
                         buttons = cap_dets.get("buttons", None)
@@ -760,13 +764,11 @@ async def all_db_users_here(client, message):
 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["broadcast"]))
 async def broadcast(bot, message):
-    # ==================== ADD LOGGER ====================
     try:
         logger = Logger(bot)
     except Exception as e:
         print(f"⚠️ Logger error: {e}")
         logger = None
-    # ===================================================
     
     if (message.reply_to_message):
         rkn = await message.reply_text("Bot Processing.\nI am checking all bot users.")
@@ -777,13 +779,11 @@ async def broadcast(bot, message):
         deactivated = 0
         blocked = 0
         
-        # ==================== ADD LOG ====================
         if logger:
             try:
                 await logger.broadcast_started(message.from_user.id, tot)
             except Exception as e:
                 print(f"⚠️ Log error: {e}")
-        # =================================================
         
         await rkn.edit(f"bot ʙʀᴏᴀᴅᴄᴀsᴛɪɴɢ started...")
         async for user in all_users:
@@ -806,13 +806,11 @@ async def broadcast(bot, message):
             except FloodWait as e:
                 await asyncio.sleep(e.x)
         
-        # ==================== ADD LOG ====================
         if logger:
             try:
                 await logger.broadcast_completed(message.from_user.id, success, failed, blocked, deactivated, tot)
             except Exception as e:
                 print(f"⚠️ Log error: {e}")
-        # =================================================
         
         await rkn.edit(f"<u>ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u>\n\n• ᴛᴏᴛᴀʟ ᴜsᴇʀs: {tot}\n• sᴜᴄᴄᴇssғᴜʟ: {success}\n• ʙʟᴏᴄᴋᴇᴅ ᴜsᴇʀs: {blocked}\n• ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛs: {deactivated}\n• ᴜɴsᴜᴄᴄᴇssғᴜʟ: {failed}")
 
