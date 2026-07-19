@@ -37,17 +37,25 @@ async def back_button_only():
 
 # ==================== GET HOME MENU CAPTION ====================
 
-async def get_home_caption(user_id):
-    """Get home menu caption with channel status"""
+async def get_home_caption(user_id, first_name=None):
+    """Get home menu caption with welcome message and user name"""
+    
+    # ✅ Welcome message with user name
+    if first_name:
+        welcome = f"**👋 Welcome {first_name}!**\n\n"
+    else:
+        welcome = f"**👋 Welcome!**\n\n"
+    
+    # ✅ Channel status
     chkData = await getChannelDataByUser(user_id)
     
     if chkData:
-        channel_id = chkData.get("chnl_id", "Not set")
-        channel_status = f"✅ **Channel ID:** `{channel_id}`"
+        channel_status = "✅ **Channel is Connected!**\n\nYou can manage your settings using the buttons below."
     else:
-        channel_status = "❌ **No channel set yet!**\n\n📌 **How to set:**\n1. Add me as admin in your channel\n2. Send `/set_caption` or `/set_buttons` in your channel\n3. I'll auto-detect your channel!"
+        channel_status = "❌ **No Channel Connected!**\n\n📌 **How to connect:**\n1. Add me as admin in your channel\n2. Send `/set_caption` or `/set_buttons` in your channel\n3. I'll auto-detect your channel!"
     
-    caption = f"<b>🏠 Main Menu</b>\n\n"
+    caption = f"{welcome}"
+    caption += f"**This is powerful Auto caption bot fully customised and easy to use.**\n\n"
     caption += f"{channel_status}\n\n"
     caption += f"<i>Select an option below to manage your settings:</i>"
     
@@ -72,6 +80,7 @@ async def check_bot_admin(bot, channel_id):
 async def start_cmd(bot, message):
     print("✅ /start command triggered!")
     user_id = int(message.from_user.id)
+    first_name = message.from_user.first_name or "User"
     
     user_exists = await users.find_one({"_id": user_id})
     
@@ -91,7 +100,7 @@ async def start_cmd(bot, message):
         print(f"👤 Existing user: {user_id}")
     
     buttons = await main_menu_buttons()
-    caption = await get_home_caption(user_id)
+    caption = await get_home_caption(user_id, first_name)
     
     await message.reply_photo(
         photo=Rkn_Bots.RKN_PIC,
@@ -105,6 +114,7 @@ async def start_cmd(bot, message):
 async def callback_handler(bot, callback_query):
     user_id = callback_query.from_user.id
     data = callback_query.data
+    first_name = callback_query.from_user.first_name or "User"
     
     try:
         logger = Logger(bot)
@@ -123,7 +133,7 @@ async def callback_handler(bot, callback_query):
     
     if data == "back_to_menu":
         buttons = await main_menu_buttons()
-        caption = await get_home_caption(user_id)
+        caption = await get_home_caption(user_id, first_name)
         
         try:
             await callback_query.message.reply_photo(
@@ -178,7 +188,6 @@ async def callback_handler(bot, callback_query):
 async def get_channel_owner_or_admin(bot, channel_id):
     """Get the owner or admin of a channel"""
     try:
-        # Try to get channel admins
         admins = await bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
         async for admin in admins:
             if admin.user and not admin.user.is_bot:
@@ -215,9 +224,8 @@ async def auto_set_channel(bot, message):
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
     
-    # Method 2: Agar sender_chat hai toh usme se user ID nikaalo
-    if not user_id and message.sender_chat:
-        # Channel owner/admin dhundho
+    # Method 2: Channel owner/admin dhundho
+    if not user_id:
         owner_id = await get_channel_owner_or_admin(bot, channel_id)
         if owner_id:
             user_id = owner_id
