@@ -78,17 +78,7 @@ class Logger:
                 file_type = "🖼️ Photo"
             elif message.voice:
                 file_type = "🎤 Voice"
-            
-            # ✅ Caption banayein
-            caption = f"📁 **New File Received in Channel**\n\n"
-            caption += f"• **Channel:** {title_str}\n"
-            caption += f"• **Channel ID:** `{channel_id}`\n"
-            caption += f"• **File Type:** {file_type}\n"
-            caption += f"• **File Name:** `{file_name or 'Unknown'}`\n"
-            caption += f"• **Message ID:** `{message.id}`\n"
-            caption += f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            
-            # ✅ Check if message has caption
+              # ✅ Check if message has caption
             if message.caption:
                 caption += f"\n\n📝 **Original Caption:**\n`{message.caption[:200]}{'...' if len(message.caption) > 200 else ''}`"
             
