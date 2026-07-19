@@ -56,7 +56,6 @@ async def get_home_caption(user_id, first_name=None):
     
     caption = f"{welcome}"
     caption += f"**This is powerful Auto caption bot fully customised and easy to use.**\n\n"
-    caption += f"{channel_status}\n\n"
     caption += f"<i>Select an option below to manage your settings:</i>"
     
     return caption
