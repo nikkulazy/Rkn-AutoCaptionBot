@@ -118,15 +118,8 @@ class Logger:
             from config import Rkn_Bots
             
             msg = (
-                f"🚀 **Bot Started Successfully!**\n\n"
-                f"• **Bot Name:** {me.first_name}\n"
-                f"• **Bot Username:** @{me.username}\n"
-                f"• **Bot ID:** `{me.id}`\n"
-                f"• **API ID:** `{Rkn_Bots.API_ID}`\n"
-                f"• **Force Sub:** {Rkn_Bots.FORCE_SUB or 'Disabled'}\n"
-                f"• **Log Channel:** `{Rkn_Bots.LOG_CHANNEL}`\n"
-                f"• **Admins:** `{Rkn_Bots.ADMIN}`\n"
-                f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                f"🚀 Bot Started Successfully!\n"
+                f"📌 Bot Username:** @{me.username}"
             )
             await self.send_log(msg)
             print("✅ Bot started log sent successfully!")
