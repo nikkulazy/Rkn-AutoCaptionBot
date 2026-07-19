@@ -28,22 +28,6 @@ async def main_menu_buttons():
     ])
     return buttons
 
-async def caption_page_buttons():
-    """Caption page with Delete Caption and Back buttons"""
-    buttons = types.InlineKeyboardMarkup([
-        [types.InlineKeyboardButton("❌ Delete Caption", callback_data="delete_caption")],
-        [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
-    ])
-    return buttons
-
-async def button_page_buttons():
-    """Button page with Remove Button and Back buttons"""
-    buttons = types.InlineKeyboardMarkup([
-        [types.InlineKeyboardButton("🗑️ Remove Button", callback_data="remove_button")],
-        [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
-    ])
-    return buttons
-
 async def back_button_only():
     """Only back button"""
     buttons = types.InlineKeyboardMarkup([
@@ -61,13 +45,26 @@ async def get_home_caption(user_id):
         channel_id = chkData.get("chnl_id", "Not set")
         channel_status = f"✅ **Channel ID:** `{channel_id}`"
     else:
-        channel_status = "❌ **Channel ID:** `Not saved yet!`\n\n📌 Please set your channel first:\n`/set_channel -1001234567890`"
+        channel_status = "❌ **No channel set yet!**\n\n📌 **How to set:**\n1. Add me as admin in your channel\n2. Send `/set_caption` or `/set_buttons` in your channel\n3. I'll auto-detect your channel!"
     
     caption = f"<b>🏠 Main Menu</b>\n\n"
     caption += f"{channel_status}\n\n"
     caption += f"<i>Select an option below to manage your settings:</i>"
     
     return caption
+
+# ==================== CHECK IF BOT IS ADMIN IN CHANNEL ====================
+
+async def check_bot_admin(bot, channel_id):
+    """Check if bot is admin in the channel"""
+    try:
+        chat_member = await bot.get_chat_member(channel_id, (await bot.get_me()).id)
+        if chat_member.status in [types.ChatMemberStatus.ADMINISTRATOR, types.ChatMemberStatus.OWNER]:
+            return True
+        return False
+    except Exception as e:
+        print(f"❌ Bot admin check failed: {e}")
+        return False
 
 # ==================== START COMMAND ====================
 
@@ -153,369 +150,80 @@ async def callback_handler(bot, callback_query):
         await callback_query.answer()
         return
     
-    # ========== SET CAPTION PAGE ==========
+    # ========== SET CAPTION INFO ==========
     elif data == "set_caption":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if not chkData:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No channel found!**\n\n"
-                f"Please set your channel ID first:\n"
-                f"`/set_channel -1001234567890`",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        chnl_id = chkData.get("chnl_id")
-        channel_data = await getChannelData(chnl_id)
-        current_caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
-        
-        buttons = await caption_page_buttons()
+        buttons = await back_button_only()
         await callback_query.message.reply_text(
-            f"**📝 Set Caption**\n\n"
-            f"**Current Caption:**\n`{current_caption}`\n\n"
-            f"**How to Set:**\n"
+            f"**📝 How to Set Caption**\n\n"
+            f"1️⃣ Add me as **admin** in your channel\n"
+            f"2️⃣ Go to your **channel**\n"
+            f"3️⃣ Send this command:\n\n"
             f"`/set_caption Your caption here {{file_name}}`\n\n"
-            f"**Example:**\n"
+            f"**📌 Example:**\n"
             f"`/set_caption 📁 File: {{file_name}}\nJoin @wolverine273`\n\n"
-            f"**Variables:**\n"
-            f"• `{{file_name}}` - Shows original file name\n\n"
-            f"<i>Type the command with your new caption.</i>",
+            f"**📌 Variables:**\n"
+            f"• `{{file_name}}` - Original file name\n\n"
+            f"⚠️ This command only works in **channel**, not in private chat!",
             reply_markup=buttons
         )
         await callback_query.answer()
     
-    # ========== DELETE CAPTION ==========
-    elif data == "delete_caption":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if not chkData:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No channel found!**\n\n"
-                f"Please set your channel ID first.",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        chnl_id = chkData.get("chnl_id")
-        await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
-        await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
-        
-        # ==================== ADD LOG ====================
-        if logger:
-            try:
-                await logger.caption_deleted(user_id, chnl_id)
-            except Exception as e:
-                print(f"⚠️ Log error: {e}")
-        # =================================================
-        
-        buttons = await back_button_only()
-        await callback_query.message.reply_text(
-            f"✅ **Caption Deleted Successfully!**\n\n"
-            f"Now using default caption.\n\n"
-            f"**Default Caption:**\n`{Rkn_Bots.DEF_CAP}`",
-            reply_markup=buttons
-        )
-        await callback_query.answer()
-    
-    # ========== ADD BUTTON PAGE ==========
+    # ========== ADD BUTTON INFO ==========
     elif data == "add_button":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if not chkData:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No channel found!**\n\n"
-                f"Please set your channel ID first:\n"
-                f"`/set_channel -1001234567890`",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        chnl_id = chkData.get("chnl_id")
-        channel_data = await getChannelData(chnl_id)
-        current_buttons = channel_data.get("buttons", []) if channel_data else []
-        
-        btn_preview = ""
-        if current_buttons:
-            btn_preview = "\n**Current Buttons:**\n"
-            btn_preview += "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in current_buttons])
-            btn_preview += f"\n\n**Total:** `{len(current_buttons)}` button(s)\n"
-        else:
-            btn_preview = "\n❌ No buttons set yet.\n"
-        
-        buttons = await button_page_buttons()
+        buttons = await back_button_only()
         await callback_query.message.reply_text(
-            f"**📎 Add Button**\n\n"
-            f"{btn_preview}\n"
-            f"**How to Add Buttons:**\n"
+            f"**📎 How to Add Buttons**\n\n"
+            f"1️⃣ Add me as **admin** in your channel\n"
+            f"2️⃣ Go to your **channel**\n"
+            f"3️⃣ Send this command:\n\n"
             f"`/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
-            f"**Example 1 (Single):**\n"
+            f"**📌 Example 1 (Single):**\n"
             f"`/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
-            f"**Example 2 (Multiple):**\n"
+            f"**📌 Example 2 (Multiple):**\n"
             f"`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`\n\n"
-            f"<i>Type the command with your buttons.</i>",
-            reply_markup=buttons
-        )
-        await callback_query.answer()
-    
-    # ========== REMOVE BUTTON ==========
-    elif data == "remove_button":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if not chkData:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No channel found!**",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        chnl_id = chkData.get("chnl_id")
-        channel_data = await getChannelData(chnl_id)
-        
-        if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No buttons to remove!**\n\n"
-                f"Use `/set_buttons` to add buttons first.",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        await deleteButtonsByUser(user_id)
-        await deleteButtons(chnl_id)
-        
-        # ==================== ADD LOG ====================
-        if logger:
-            try:
-                await logger.buttons_removed(user_id, chnl_id)
-            except Exception as e:
-                print(f"⚠️ Log error: {e}")
-        # =================================================
-        
-        buttons = await back_button_only()
-        await callback_query.message.reply_text(
-            f"✅ **Button Removed Successfully!**\n\n"
-            f"Now no buttons will be shown with captions.\n\n"
-            f"<i>Use Add Button to add new buttons.</i>",
-            reply_markup=buttons
-        )
-        await callback_query.answer()
-    
-    # ========== REMOVE CHANNEL ==========
-    elif data == "remove_channel":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if not chkData:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No channel found!**\n\n"
-                f"You don't have any channel set.",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        # Confirm removal
-        confirm_buttons = types.InlineKeyboardMarkup([
-            [
-                types.InlineKeyboardButton("✅ Yes, Remove", callback_data="confirm_remove_channel"),
-                types.InlineKeyboardButton("❌ Cancel", callback_data="back_to_menu")
-            ]
-        ])
-        
-        await callback_query.message.reply_text(
-            f"⚠️ **Remove Channel**\n\n"
-            f"Are you sure you want to remove your channel?\n"
-            f"Channel ID: `{chkData.get('chnl_id')}`\n\n"
-            f"This will remove all your settings!",
-            reply_markup=confirm_buttons
-        )
-        await callback_query.answer()
-    
-    # ========== CONFIRM REMOVE CHANNEL ==========
-    elif data == "confirm_remove_channel":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if chkData:
-            chnl_id = chkData.get("chnl_id")
-            # ✅ DIRECT DATABASE DELETE
-            await chnl_ids.delete_many({"user_id": user_id})
-            await chnl_ids.delete_many({"chnl_id": chnl_id})
-            
-            # ==================== ADD LOG ====================
-            if logger:
-                try:
-                    await logger.channel_removed(user_id, chnl_id)
-                except Exception as e:
-                    print(f"⚠️ Log error: {e}")
-            # =================================================
-            
-            print(f"✅ Channel {chnl_id} removed for user {user_id}")
-        
-        buttons = await main_menu_buttons()
-        caption = await get_home_caption(user_id)
-        
-        try:
-            await callback_query.message.reply_photo(
-                photo=Rkn_Bots.RKN_PIC,
-                caption=f"✅ **Channel Removed Successfully!**\n\n"
-                f"Your channel has been removed.\n\n"
-                f"{caption}",
-                reply_markup=buttons
-            )
-        except Exception as e:
-            await callback_query.message.reply_text(
-                f"✅ **Channel Removed Successfully!**\n\n"
-                f"Your channel has been removed.\n\n"
-                f"{caption}",
-                reply_markup=buttons
-            )
-        await callback_query.answer()
-    
-    # ========== STATUS ==========
-    elif data == "status":
-        chkData = await getChannelDataByUser(user_id)
-        
-        if not chkData:
-            buttons = await back_button_only()
-            await callback_query.message.reply_text(
-                f"❌ **No settings found!**\n\n"
-                f"Please set your channel first:\n"
-                f"`/set_channel -1001234567890`",
-                reply_markup=buttons
-            )
-            await callback_query.answer()
-            return
-        
-        chnl_id = chkData.get("chnl_id")
-        channel_data = await getChannelData(chnl_id)
-        
-        caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
-        buttons_data = channel_data.get("buttons", []) if channel_data else []
-        
-        btn_count = len(buttons_data)
-        btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
-        
-        buttons = await back_button_only()
-        await callback_query.message.reply_text(
-            f"**📊 Your Settings**\n\n"
-            f"🔹 **Channel ID:** `{chnl_id}`\n\n"
-            f"🔹 **Caption:**\n`{caption}`\n\n"
-            f"🔹 **Buttons:** ({btn_count})\n{btn_preview}",
+            f"⚠️ This command only works in **channel**, not in private chat!",
             reply_markup=buttons
         )
         await callback_query.answer()
 
-# ==================== REMOVE CHANNEL COMMAND (ALL USERS) ====================
+# ==================== AUTO SET CHANNEL FUNCTION ====================
 
-@Client.on_message(filters.private & filters.command("remove_channel"))
-async def remove_channel_cmd(bot, message):
-    print("✅ /remove_channel command triggered!")
+async def auto_set_channel(bot, message):
+    """Auto set channel when user sends command in channel"""
     user_id = message.from_user.id
+    channel_id = message.chat.id
     
-    # ==================== ADD LOGGER ====================
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    # ===================================================
+    # ✅ Check if bot is admin in channel
+    is_admin = await check_bot_admin(bot, channel_id)
     
-    try:
-        await message.delete()
-    except:
-        pass
+    if not is_admin:
+        await message.reply_text(
+            f"❌ **I'm not admin in this channel!**\n\n"
+            f"Please add me as admin in this channel first.\n\n"
+            f"**How to add:**\n"
+            f"1. Open channel settings\n"
+            f"2. Go to Administrators\n"
+            f"3. Add this bot as admin"
+        )
+        return None
     
-    # Check if channel exists
+    # ✅ Check if channel already exists for this user
     chkData = await getChannelDataByUser(user_id)
     
-    if not chkData:
-        buttons = await back_button_only()
-        return await message.reply_text(
-            "❌ **No channel found!**\n\n"
-            "You don't have any channel set.",
-            reply_markup=buttons
-        )
+    if chkData and chkData.get("chnl_id") == channel_id:
+        # Channel already set, return it
+        return channel_id
     
-    # ✅ CHANNEL ID LE LO
-    chnl_id = chkData.get("chnl_id")
+    # ✅ Delete old channel data if exists
+    if chkData:
+        await chnl_ids.delete_many({"user_id": user_id})
+        await chnl_ids.delete_many({"chnl_id": chkData.get("chnl_id")})
     
-    # ✅ DATABASE SE COMPLETE DELETE KARO
-    await chnl_ids.delete_many({"user_id": user_id})
-    await chnl_ids.delete_many({"chnl_id": chnl_id})
+    # ✅ Save new channel
+    await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+    await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
-    # ==================== ADD LOG ====================
-    if logger:
-        try:
-            await logger.channel_removed(user_id, chnl_id)
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
-    # =================================================
-    
-    print(f"✅ Channel {chnl_id} removed for user {user_id}")
-    
-    # ✅ HOME MENU SHOW KARO
-    buttons = await main_menu_buttons()
-    caption = await get_home_caption(user_id)
-    
-    await message.reply_photo(
-        photo=Rkn_Bots.RKN_PIC,
-        caption=f"✅ **Channel Removed Successfully!**\n\n"
-        f"Your channel has been removed.\n\n"
-        f"{caption}",
-        reply_markup=buttons
-    )
-
-# ==================== SET CHANNEL ====================
-
-@Client.on_message(filters.private & filters.command("set_channel"))
-async def setChannel(bot, message):
-    print("✅ /set_channel command triggered!")
-    user_id = message.from_user.id
-    
-    # ==================== ADD LOGGER ====================
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    # ===================================================
-    
-    try:
-        await message.delete()
-    except:
-        pass
-    
-    if len(message.command) < 2:
-        buttons = await back_button_only()
-        return await message.reply_text(
-            "❌ **Please provide channel ID!**\n\n"
-            "**Usage:** `/set_channel -1001234567890`\n\n"
-            "**How to get channel ID:**\n"
-            "1. Add @MissRose_bot to your channel\n"
-            "2. Send /id in channel\n"
-            "3. Copy the channel ID",
-            reply_markup=buttons
-        )
-    
-    channel_id = message.text.split(" ", 1)[1]
-    
-    try:
-        channel_id = int(channel_id)
-    except:
-        buttons = await back_button_only()
-        return await message.reply_text("❌ Invalid channel ID! Must be a number.", reply_markup=buttons)
-    
-    # Get channel title for log
+    # ✅ Get channel title for log
     channel_title = None
     try:
         chat = await bot.get_chat(channel_id)
@@ -523,34 +231,30 @@ async def setChannel(bot, message):
     except:
         pass
     
-    # ✅ PEHLE OLD DATA DELETE KARO
-    await chnl_ids.delete_many({"user_id": user_id})
-    await chnl_ids.delete_many({"chnl_id": channel_id})
-    
-    # ✅ NAYA DATA ADD KARO
-    await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
-    await addCap(channel_id, Rkn_Bots.DEF_CAP)
-    
     # ==================== ADD LOG ====================
-    if logger:
-        try:
-            await logger.channel_setup(user_id, channel_id, channel_title)
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
+    try:
+        logger = Logger(bot)
+        await logger.channel_setup(user_id, channel_id, channel_title)
+    except Exception as e:
+        print(f"⚠️ Log error: {e}")
     # =================================================
     
-    buttons = await main_menu_buttons()
-    caption = await get_home_caption(user_id)
+    print(f"✅ Channel {channel_id} auto-set for user {user_id}")
     
-    await message.reply_photo(
-        photo=Rkn_Bots.RKN_PIC,
-        caption=caption,
-        reply_markup=buttons
+    await message.reply_text(
+        f"✅ **Channel Set Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n"
+        f"**Channel Name:** {channel_title or 'Unknown'}\n\n"
+        f"Now you can use:\n"
+        f"• `/set_caption` - Set your caption\n"
+        f"• `/set_buttons` - Set your buttons"
     )
+    
+    return channel_id
 
-# ==================== SET CAPTION ====================
+# ==================== SET CAPTION COMMAND (WORKS IN CHANNEL ONLY) ====================
 
-@Client.on_message(filters.private & filters.command("set_caption"))
+@Client.on_message(filters.command("set_caption") & (filters.channel | filters.private))
 async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
     user_id = message.from_user.id
@@ -568,51 +272,61 @@ async def setCaption(bot, message):
     except:
         pass
     
-    if len(message.command) < 2:
-        buttons = await caption_page_buttons()
-        return await message.reply_text(
-            "❌ **Please provide caption!**\n\n"
-            "**Usage:** `/set_caption Your caption here {file_name}`\n\n"
-            "**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
-            "**{file_name}** - Shows original file name",
+    # ✅ Agar private me command aayi hai toh guide karo
+    if message.chat.type == types.ChatType.PRIVATE:
+        buttons = await back_button_only()
+        await message.reply_text(
+            f"❌ **Please use this command in your channel!**\n\n"
+            f"📌 **How to use:**\n"
+            f"1. Add me as admin in your channel\n"
+            f"2. Go to your channel\n"
+            f"3. Send: `/set_caption Your caption here {{file_name}}`\n\n"
+            f"**Example:**\n"
+            f"`/set_caption 📁 File: {{file_name}}\nJoin @wolverine273`",
             reply_markup=buttons
         )
+        return
+    
+    # ✅ Channel me se aaya hai toh auto-set channel
+    channel_id = await auto_set_channel(bot, message)
+    
+    if channel_id is None:
+        # Bot admin nahi hai ya error aaya
+        return
+    
+    # ✅ Check if caption provided
+    if len(message.command) < 2:
+        await message.reply_text(
+            f"❌ **Please provide caption!**\n\n"
+            f"**Usage:** `/set_caption Your caption here {file_name}`\n\n"
+            f"**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
+            f"**{file_name}** - Shows original file name"
+        )
+        return
     
     caption = message.text.split(" ", 1)[1]
     
-    chkData = await getChannelDataByUser(user_id)
+    # ✅ Update caption
+    await updateCapByUser(user_id, caption)
+    await updateCap(channel_id, caption)
     
-    if chkData:
-        chnl_id = chkData.get("chnl_id")
-        await updateCapByUser(user_id, caption)
-        await updateCap(chnl_id, caption)
-        
-        # ==================== ADD LOG ====================
-        if logger:
-            try:
-                await logger.caption_set(user_id, chnl_id, caption)
-            except Exception as e:
-                print(f"⚠️ Log error: {e}")
-        # =================================================
-        
-        buttons = await caption_page_buttons()
-        return await message.reply_text(
-            f"✅ **Caption Updated Successfully!**\n\n"
-            f"**Your New Caption:**\n`{caption}`",
-            reply_markup=buttons
-        )
-    else:
-        buttons = await back_button_only()
-        return await message.reply_text(
-            "❌ **No channel found!**\n\n"
-            "Please set your channel ID first:\n"
-            "`/set_channel -1001234567890`",
-            reply_markup=buttons
-        )
+    # ==================== ADD LOG ====================
+    if logger:
+        try:
+            await logger.caption_set(user_id, channel_id, caption)
+        except Exception as e:
+            print(f"⚠️ Log error: {e}")
+    # =================================================
+    
+    await message.reply_text(
+        f"✅ **Caption Updated Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n\n"
+        f"**Your New Caption:**\n`{caption}`"
+    )
 
-# ==================== SET BUTTONS ====================
+# ==================== SET BUTTONS COMMAND (WORKS IN CHANNEL ONLY) ====================
 
-@Client.on_message(filters.private & filters.command("set_buttons"))
+@Client.on_message(filters.command("set_buttons") & (filters.channel | filters.private))
 async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     user_id = message.from_user.id
@@ -630,26 +344,36 @@ async def setButtons(bot, message):
     except:
         pass
     
-    chkData = await getChannelDataByUser(user_id)
-    if not chkData:
+    # ✅ Agar private me command aayi hai toh guide karo
+    if message.chat.type == types.ChatType.PRIVATE:
         buttons = await back_button_only()
-        return await message.reply_text(
-            "❌ **No channel found!**\n\n"
-            "Please set your channel ID first:\n"
-            "`/set_channel -1001234567890`",
+        await message.reply_text(
+            f"❌ **Please use this command in your channel!**\n\n"
+            f"📌 **How to use:**\n"
+            f"1. Add me as admin in your channel\n"
+            f"2. Go to your channel\n"
+            f"3. Send: `/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
+            f"**Example:**\n"
+            f"`/set_buttons 📢 Join:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`",
             reply_markup=buttons
         )
+        return
+    
+    # ✅ Channel me se aaya hai toh auto-set channel
+    channel_id = await auto_set_channel(bot, message)
+    
+    if channel_id is None:
+        return
     
     if len(message.command) < 2:
-        buttons = await button_page_buttons()
-        return await message.reply_text(
-            "❌ **Please provide buttons!**\n\n"
-            "**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
-            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
-            "**Multiple Buttons:**\n"
-            "`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`",
-            reply_markup=buttons
+        await message.reply_text(
+            f"❌ **Please provide buttons!**\n\n"
+            f"**Usage:** `/set_buttons [Text]:[URL] | [Text]:[URL]`\n"
+            f"**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
+            f"**Multiple Buttons:**\n"
+            f"`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`"
         )
+        return
     
     buttons_text = message.text.split(" ", 1)[1]
     if not buttons_text:
@@ -670,48 +394,44 @@ async def setButtons(bot, message):
                         return await message.reply_text(f"❌ Invalid URL: `{url}`")
     
     if not buttons_data:
-        buttons = await button_page_buttons()
         return await message.reply_text(
-            "❌ **No valid buttons found!**\n\n"
-            "**Format:** `[Text]:[URL]` separated by ` | `\n"
-            "**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`",
-            reply_markup=buttons
+            f"❌ **No valid buttons found!**\n\n"
+            f"**Format:** `[Text]:[URL]` separated by ` | `\n"
+            f"**Example:** `/set_buttons 📢 Join:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`"
         )
     
-    chnl_id = chkData.get("chnl_id")
-    print(f"📌 Setting buttons for Channel: {chnl_id}")
+    print(f"📌 Setting buttons for Channel: {channel_id}")
     print(f"📌 Buttons: {len(buttons_data)} button(s)")
     
-    await updateButtons(chnl_id, buttons_data)
+    await updateButtons(channel_id, buttons_data)
     await updateButtonsByUser(user_id, buttons_data)
     
     # ==================== ADD LOG ====================
     if logger:
         try:
-            await logger.buttons_set(user_id, chnl_id, len(buttons_data))
+            await logger.buttons_set(user_id, channel_id, len(buttons_data))
         except Exception as e:
             print(f"⚠️ Log error: {e}")
     # =================================================
     
-    verify_data = await getChannelData(chnl_id)
+    verify_data = await getChannelData(channel_id)
     saved_buttons = verify_data.get("buttons", [])
-    print(f"✅ Verified: {len(saved_buttons)} buttons saved for channel {chnl_id}")
+    print(f"✅ Verified: {len(saved_buttons)} buttons saved for channel {channel_id}")
     
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
-    buttons = await button_page_buttons()
     await message.reply_text(
         f"✅ **Buttons Set Successfully!**\n\n"
-        f"📌 **Channel ID:** `{chnl_id}`\n"
+        f"📌 **Channel ID:** `{channel_id}`\n"
         f"🔢 **Buttons Saved:** `{len(saved_buttons)}` button(s)\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
         f"📌 Now post a file in this channel to see buttons!",
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
 
-# ==================== DELETE CAPTION COMMAND ====================
+# ==================== DELETE CAPTION COMMAND (WORKS IN CHANNEL) ====================
 
-@Client.on_message(filters.private & filters.command(["delcaption", "del_caption", "delete_caption"]))
+@Client.on_message(filters.command(["delcaption", "del_caption", "delete_caption"]) & (filters.channel | filters.private))
 async def delCaption(bot, message):
     print("✅ /delcaption command triggered!")
     user_id = message.from_user.id
@@ -729,33 +449,47 @@ async def delCaption(bot, message):
     except:
         pass
     
+    # ✅ Agar private me command aayi hai toh guide karo
+    if message.chat.type == types.ChatType.PRIVATE:
+        buttons = await back_button_only()
+        await message.reply_text(
+            f"❌ **Please use this command in your channel!**\n\n"
+            f"Go to your channel and send `/delcaption`",
+            reply_markup=buttons
+        )
+        return
+    
+    # ✅ Channel me se aaya hai toh auto-set channel
+    channel_id = await auto_set_channel(bot, message)
+    
+    if channel_id is None:
+        return
+    
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
-        buttons = await back_button_only()
-        return await message.reply_text("❌ No data found for your channel!", reply_markup=buttons)
+        return await message.reply_text("❌ No data found for your channel!")
     
-    chnl_id = chkData.get("chnl_id")
     await updateCapByUser(user_id, Rkn_Bots.DEF_CAP)
-    await updateCap(chnl_id, Rkn_Bots.DEF_CAP)
+    await updateCap(channel_id, Rkn_Bots.DEF_CAP)
     
     # ==================== ADD LOG ====================
     if logger:
         try:
-            await logger.caption_deleted(user_id, chnl_id)
+            await logger.caption_deleted(user_id, channel_id)
         except Exception as e:
             print(f"⚠️ Log error: {e}")
     # =================================================
     
-    buttons = await back_button_only()
     await message.reply_text(
-        "✅ **Caption Deleted Successfully!**\n"
-        f"Now I will use default caption.",
-        reply_markup=buttons
+        f"✅ **Caption Deleted Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n"
+        f"Now I will use default caption.\n\n"
+        f"**Default Caption:**\n`{Rkn_Bots.DEF_CAP}`"
     )
 
-# ==================== REMOVE BUTTONS COMMAND ====================
+# ==================== REMOVE BUTTONS COMMAND (WORKS IN CHANNEL) ====================
 
-@Client.on_message(filters.private & filters.command("remove_buttons"))
+@Client.on_message(filters.command("remove_buttons") & (filters.channel | filters.private))
 async def removeButtons(bot, message):
     print("✅ /remove_buttons command triggered!")
     user_id = message.from_user.id
@@ -773,34 +507,46 @@ async def removeButtons(bot, message):
     except:
         pass
     
+    # ✅ Agar private me command aayi hai toh guide karo
+    if message.chat.type == types.ChatType.PRIVATE:
+        buttons = await back_button_only()
+        await message.reply_text(
+            f"❌ **Please use this command in your channel!**\n\n"
+            f"Go to your channel and send `/remove_buttons`",
+            reply_markup=buttons
+        )
+        return
+    
+    # ✅ Channel me se aaya hai toh auto-set channel
+    channel_id = await auto_set_channel(bot, message)
+    
+    if channel_id is None:
+        return
+    
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
-        buttons = await back_button_only()
-        return await message.reply_text("❌ No data found for your channel!", reply_markup=buttons)
+        return await message.reply_text("❌ No data found for your channel!")
     
-    chnl_id = chkData.get("chnl_id")
-    channel_data = await getChannelData(chnl_id)
+    channel_data = await getChannelData(channel_id)
     
     if not channel_data or "buttons" not in channel_data or not channel_data["buttons"]:
-        buttons = await back_button_only()
-        return await message.reply_text("❌ No buttons are currently set!", reply_markup=buttons)
+        return await message.reply_text("❌ No buttons are currently set!")
     
     await deleteButtonsByUser(user_id)
-    await deleteButtons(chnl_id)
+    await deleteButtons(channel_id)
     
     # ==================== ADD LOG ====================
     if logger:
         try:
-            await logger.buttons_removed(user_id, chnl_id)
+            await logger.buttons_removed(user_id, channel_id)
         except Exception as e:
             print(f"⚠️ Log error: {e}")
     # =================================================
     
-    buttons = await back_button_only()
     await message.reply_text(
-        "✅ **Buttons Removed Successfully!**\n"
-        "Now no buttons will be shown with captions.",
-        reply_markup=buttons
+        f"✅ **Buttons Removed Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n"
+        f"Now no buttons will be shown with captions."
     )
 
 # ==================== STATUS COMMAND ====================
@@ -820,9 +566,11 @@ async def status_cmd(bot, message):
     if not chkData:
         buttons = await back_button_only()
         return await message.reply_text(
-            "❌ **No settings found!**\n\n"
-            "Please set your channel first:\n"
-            "`/set_channel -1001234567890`",
+            f"❌ **No settings found!**\n\n"
+            f"📌 **How to set:**\n"
+            f"1. Add me as admin in your channel\n"
+            f"2. Send `/set_caption` in your channel\n"
+            f"3. I'll auto-detect your channel!",
             reply_markup=buttons
         )
     
@@ -835,13 +583,11 @@ async def status_cmd(bot, message):
     btn_count = len(buttons_data)
     btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
     
-    buttons = await back_button_only()
     await message.reply_text(
         f"**📊 Your Settings**\n\n"
         f"🔹 **Channel ID:** `{chnl_id}`\n\n"
         f"🔹 **Caption:**\n`{caption}`\n\n"
-        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}",
-        reply_markup=buttons
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}"
     )
 
 # ==================== HELP COMMAND ====================
@@ -860,17 +606,18 @@ async def help_cmd(bot, message):
     await message.reply_text(
         f"**🤖 Auto Caption Bot Help**\n\n"
         f"**Setup Guide:**\n"
-        f"1️⃣ `/set_channel -1001234567890` - Set your channel ID\n"
-        f"2️⃣ `/set_caption Your caption {{file_name}}` - Set caption\n"
-        f"3️⃣ `/set_buttons Text:URL | Text:URL` - Set buttons\n\n"
-        f"**📋 Commands:**\n"
-        f"📌 `/set_channel` - Set channel ID\n"
+        f"1️⃣ Add me as admin in your channel\n"
+        f"2️⃣ Go to your channel\n"
+        f"3️⃣ Send `/set_caption Your caption {{file_name}}`\n"
+        f"4️⃣ Send `/set_buttons Text:URL | Text:URL`\n\n"
+        f"**📋 Commands (Send in your channel):**\n"
         f"📝 `/set_caption` - Set caption\n"
         f"📎 `/set_buttons` - Set buttons\n"
-        f"🗑️ `/remove_channel` - Remove channel\n"
         f"❌ `/delcaption` - Delete caption\n"
-        f"🗑️ `/remove_buttons` - Remove buttons\n"
-        f"📊 `/status` - Check settings\n\n"
+        f"🗑️ `/remove_buttons` - Remove buttons\n\n"
+        f"**📋 Commands (Private):**\n"
+        f"📊 `/status` - Check settings\n"
+        f"📢 `/help` - Show this help\n\n"
         f"**📌 Variables in Caption:**\n"
         f"`{{file_name}}` - Original file name\n\n"
         f"**📌 Button Format:**\n"
@@ -878,7 +625,7 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ==================== 🆕 AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
+# ==================== AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
@@ -934,10 +681,9 @@ async def auto_edit_caption(bot, message):
                 print(f"📁 File: {file_name_clean}")
                 
                 try:
-                    # ==================== 🆕 FILE FORWARD TO LOG CHANNEL ====================
+                    # ==================== FILE FORWARD TO LOG CHANNEL ====================
                     try:
                         logger = Logger(bot)
-                        # ✅ File ko log channel me forward karein
                         await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
@@ -1060,6 +806,6 @@ async def reset_db(bot, message):
     print("🔄 Resetting database...")
     user_id = message.from_user.id
     await resetUserData(user_id)
-    await message.reply("✅ Database reset for your channel! Please set up again.\n\n`/set_channel -1001234567890`")
+    await message.reply("✅ Database reset for your channel! Please set up again.\n\nAdd me as admin in your channel and send `/set_caption`")
 
 print("✅ Caption.py loaded successfully!")
