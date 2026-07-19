@@ -66,6 +66,20 @@ async def check_bot_admin(bot, channel_id):
         print(f"❌ Bot admin check failed: {e}")
         return False
 
+# ==================== GET USER ID FROM MESSAGE ====================
+
+def get_user_id_from_message(message):
+    """Get user ID from message (works for both private and channel messages)"""
+    # Agar private message hai
+    if message.from_user:
+        return message.from_user.id
+    # Agar channel message hai (sender_chat se)
+    elif message.sender_chat:
+        # Channel ke case mein, sender_chat channel hai, user nahi
+        # Hum user ID nahi nikal sakte, isliye channel ID use karte hain
+        return None
+    return None
+
 # ==================== START COMMAND ====================
 
 @Client.on_message(filters.command("start") & filters.private)
@@ -190,7 +204,6 @@ async def callback_handler(bot, callback_query):
 
 async def auto_set_channel(bot, message):
     """Auto set channel when user sends command in channel"""
-    user_id = message.from_user.id
     channel_id = message.chat.id
     
     # ✅ Check if bot is admin in channel
@@ -206,6 +219,26 @@ async def auto_set_channel(bot, message):
             f"3. Add this bot as admin"
         )
         return None
+    
+    # ✅ Get user ID - channel mein sender_chat use karo
+    user_id = None
+    
+    # Agar message reply hai toh usme se user ID lo
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
+    # Agar message ka sender_chat hai toh usme se channel ID lo
+    elif message.sender_chat:
+        # Sender chat channel hai, user ID nahi milega
+        # Isliye hum message ke channel ki ID use karte hain
+        # Aur user ko database mein channel ID se map karte hain
+        pass
+    
+    # Agar user_id nahi mila toh message.chat.id use karo
+    # Kyunki channel anonymous hai, user ki jagah channel ID use karenge
+    if not user_id:
+        user_id = channel_id  # Channel ID ko user ID ki tarah use karo
+    
+    print(f"👤 User/Channel ID: {user_id}")
     
     # ✅ Check if channel already exists for this user
     chkData = await getChannelDataByUser(user_id)
@@ -257,20 +290,6 @@ async def auto_set_channel(bot, message):
 @Client.on_message(filters.command("set_caption") & (filters.channel | filters.private))
 async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
-    user_id = message.from_user.id
-    
-    # ==================== ADD LOGGER ====================
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    # ===================================================
-    
-    try:
-        await message.delete()
-    except:
-        pass
     
     # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == types.ChatType.PRIVATE:
@@ -287,12 +306,24 @@ async def setCaption(bot, message):
         )
         return
     
+    try:
+        await message.delete()
+    except:
+        pass
+    
     # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         # Bot admin nahi hai ya error aaya
         return
+    
+    # ✅ User ID nikaalo
+    user_id = channel_id  # Channel ID ko user ID ki tarah use karo (kyunki anonymous hai)
+    
+    # Agar reply hai toh usme se user ID lo
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     # ✅ Check if caption provided
     if len(message.command) < 2:
@@ -311,11 +342,11 @@ async def setCaption(bot, message):
     await updateCap(channel_id, caption)
     
     # ==================== ADD LOG ====================
-    if logger:
-        try:
-            await logger.caption_set(user_id, channel_id, caption)
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
+    try:
+        logger = Logger(bot)
+        await logger.caption_set(user_id, channel_id, caption)
+    except Exception as e:
+        print(f"⚠️ Log error: {e}")
     # =================================================
     
     await message.reply_text(
@@ -329,20 +360,6 @@ async def setCaption(bot, message):
 @Client.on_message(filters.command("set_buttons") & (filters.channel | filters.private))
 async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
-    user_id = message.from_user.id
-    
-    # ==================== ADD LOGGER ====================
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    # ===================================================
-    
-    try:
-        await message.delete()
-    except:
-        pass
     
     # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == types.ChatType.PRIVATE:
@@ -359,11 +376,22 @@ async def setButtons(bot, message):
         )
         return
     
+    try:
+        await message.delete()
+    except:
+        pass
+    
     # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
+    
+    # ✅ User ID nikaalo
+    user_id = channel_id  # Channel ID ko user ID ki tarah use karo
+    
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     if len(message.command) < 2:
         await message.reply_text(
@@ -407,11 +435,11 @@ async def setButtons(bot, message):
     await updateButtonsByUser(user_id, buttons_data)
     
     # ==================== ADD LOG ====================
-    if logger:
-        try:
-            await logger.buttons_set(user_id, channel_id, len(buttons_data))
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
+    try:
+        logger = Logger(bot)
+        await logger.buttons_set(user_id, channel_id, len(buttons_data))
+    except Exception as e:
+        print(f"⚠️ Log error: {e}")
     # =================================================
     
     verify_data = await getChannelData(channel_id)
@@ -434,20 +462,6 @@ async def setButtons(bot, message):
 @Client.on_message(filters.command(["delcaption", "del_caption", "delete_caption"]) & (filters.channel | filters.private))
 async def delCaption(bot, message):
     print("✅ /delcaption command triggered!")
-    user_id = message.from_user.id
-    
-    # ==================== ADD LOGGER ====================
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    # ===================================================
-    
-    try:
-        await message.delete()
-    except:
-        pass
     
     # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == types.ChatType.PRIVATE:
@@ -459,11 +473,22 @@ async def delCaption(bot, message):
         )
         return
     
+    try:
+        await message.delete()
+    except:
+        pass
+    
     # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
+    
+    # ✅ User ID nikaalo
+    user_id = channel_id
+    
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
@@ -473,11 +498,11 @@ async def delCaption(bot, message):
     await updateCap(channel_id, Rkn_Bots.DEF_CAP)
     
     # ==================== ADD LOG ====================
-    if logger:
-        try:
-            await logger.caption_deleted(user_id, channel_id)
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
+    try:
+        logger = Logger(bot)
+        await logger.caption_deleted(user_id, channel_id)
+    except Exception as e:
+        print(f"⚠️ Log error: {e}")
     # =================================================
     
     await message.reply_text(
@@ -492,20 +517,6 @@ async def delCaption(bot, message):
 @Client.on_message(filters.command("remove_buttons") & (filters.channel | filters.private))
 async def removeButtons(bot, message):
     print("✅ /remove_buttons command triggered!")
-    user_id = message.from_user.id
-    
-    # ==================== ADD LOGGER ====================
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    # ===================================================
-    
-    try:
-        await message.delete()
-    except:
-        pass
     
     # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == types.ChatType.PRIVATE:
@@ -517,11 +528,22 @@ async def removeButtons(bot, message):
         )
         return
     
+    try:
+        await message.delete()
+    except:
+        pass
+    
     # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
+    
+    # ✅ User ID nikaalo
+    user_id = channel_id
+    
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
@@ -536,11 +558,11 @@ async def removeButtons(bot, message):
     await deleteButtons(channel_id)
     
     # ==================== ADD LOG ====================
-    if logger:
-        try:
-            await logger.buttons_removed(user_id, channel_id)
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
+    try:
+        logger = Logger(bot)
+        await logger.buttons_removed(user_id, channel_id)
+    except Exception as e:
+        print(f"⚠️ Log error: {e}")
     # =================================================
     
     await message.reply_text(
