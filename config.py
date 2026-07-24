@@ -17,7 +17,7 @@ class Rkn_Bots(object):
     DB_URL = os.environ.get("DB_URL", "")
     DEF_CAP = os.environ.get("DEF_CAP", "<b><a href='telegram.me/WOLVERIN_P'>{file_name}</a></b>")
     STICKER_ID = os.environ.get("STICKER_ID", "CAACAgIAAxkBAAELFqBllhB70i13m-woXeIWDXU6BD2j7wAC9gcAAkb7rAR7xdjVOS5ziTQE")
-    ADMIN = [int(admin) if id_pattern.search(admin) else admin for admin in os.environ.get('ADMIN', '5346278816').split()]
+    ADMIN = [int(admin) if id_pattern.search(admin) else admin for admin in os.environ.get('ADMIN', '1383239349').split()]
     LOG_CHANNEL = os.environ.get("LOG_CHANNEL", "-1001521000125")
 
 # Rkn Developer 
