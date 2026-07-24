@@ -1,4 +1,4 @@
-# Caption.py - Complete Auto Caption Bot with Thumbnail Watermark
+# Caption.py - Complete Auto Caption Bot with Thumbnail Watermark (All Users)
 # (c) @RknDeveloperr
 
 from pyrogram import Client, filters, errors, types, enums
@@ -59,13 +59,11 @@ async def back_button_only():
 async def get_home_caption(user_id, first_name=None):
     """Get home menu caption with welcome message and user name"""
     
-    # ✅ Welcome message with user name
     if first_name:
         welcome = f"**👋 Welcome {first_name}!**\n\n"
     else:
         welcome = f"**👋 Welcome!**\n\n"
     
-    # ✅ Channel status
     chkData = await getChannelDataByUser(user_id)
     
     if chkData:
@@ -215,7 +213,6 @@ async def callback_handler(bot, callback_query):
             await callback_query.answer("❌ Watermark module not available!", show_alert=True)
             return
         
-        # ✅ Check if user has channel setup
         chkData = await getChannelDataByUser(user_id)
         if not chkData:
             await callback_query.answer("❌ Please setup your channel first!", show_alert=True)
@@ -281,7 +278,6 @@ async def handle_thumb_wm_callback(bot, callback_query):
         await callback_query.answer("❌ Module not available!", show_alert=True)
         return
     
-    # Check if user has channel setup
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         await callback_query.answer("❌ Please setup your channel first!", show_alert=True)
@@ -289,7 +285,6 @@ async def handle_thumb_wm_callback(bot, callback_query):
     
     option = data.replace("thumbwm_", "")
     
-    # Position options
     if option == "position":
         buttons = types.InlineKeyboardMarkup([
             [types.InlineKeyboardButton("⬆️ Top-Left", callback_data="thumbwm_pos_tl")],
@@ -306,7 +301,6 @@ async def handle_thumb_wm_callback(bot, callback_query):
         await callback_query.answer()
         return
     
-    # Position set
     if option.startswith("pos_"):
         position = option.replace("pos_", "")
         position_map = {
@@ -324,7 +318,6 @@ async def handle_thumb_wm_callback(bot, callback_query):
             await show_thumb_settings_menu(bot, callback_query)
         return
     
-    # Enable/Disable
     if option == "enable":
         Rkn_Bots.THUMB_WATERMARK_ENABLED = True
         if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
@@ -341,7 +334,6 @@ async def handle_thumb_wm_callback(bot, callback_query):
         await show_thumb_settings_menu(bot, callback_query)
         return
     
-    # Shadow toggle
     if option == "shadow":
         current = Rkn_Bots.THUMB_WATERMARK_SHADOW if hasattr(Rkn_Bots, 'THUMB_WATERMARK_SHADOW') else True
         Rkn_Bots.THUMB_WATERMARK_SHADOW = not current
@@ -352,13 +344,11 @@ async def handle_thumb_wm_callback(bot, callback_query):
         await show_thumb_settings_menu(bot, callback_query)
         return
     
-    # Preview
     if option == "preview":
         await callback_query.answer("🔄 Generating preview...")
         await thumb_wm_preview(bot, callback_query.message)
         return
     
-    # Other options - show value input prompt
     if option in ["text", "size", "opacity", "color", "bg"]:
         prompt_map = {
             "text": "📝 **Enter new watermark text:**\n\nExample: `📢 @wolverine273`\n\nSend text as reply:",
@@ -368,7 +358,6 @@ async def handle_thumb_wm_callback(bot, callback_query):
             "bg": "📦 **Enter background:**\n\nOptions: `transparent`, `black`, `white`\n\nSend option as reply:"
         }
         
-        # Store the option being set
         await callback_query.message.edit_text(
             f"{prompt_map.get(option, 'Enter value:')}\n\n"
             f"⚠️ Reply with the value in this chat."
@@ -432,7 +421,6 @@ async def thumb_wm_preview(bot, message):
                             f"• Shadow: {'✅' if (hasattr(Rkn_Bots, 'THUMB_WATERMARK_SHADOW') and Rkn_Bots.THUMB_WATERMARK_SHADOW) else '❌'}"
                 )
                 
-                # Cleanup
                 try:
                     os.remove(sample_path)
                     os.remove(watermarked)
@@ -455,13 +443,11 @@ async def handle_thumb_settings_reply(bot, message):
     if not THUMB_WATERMARK_AVAILABLE:
         return
     
-    # Check if replying to a settings message
     if not message.reply_to_message or not message.reply_to_message.text:
         return
     
     reply_text = message.reply_to_message.text.lower()
     
-    # Check what setting is being set
     if "watermark text" in reply_text:
         Rkn_Bots.THUMB_WATERMARK_TEXT = message.text
         if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
@@ -519,17 +505,16 @@ async def handle_thumb_settings_reply(bot, message):
             await message.reply(f"❌ Invalid option. Options: {', '.join(options)}")
         return
 
-# ==================== THUMBNAIL WATERMARK COMMANDS (FOR ALL USERS) ====================
+# ==================== THUMBNAIL WATERMARK COMMANDS (ALL USERS) ====================
 
 @Client.on_message(filters.private & filters.command("setthumbwm"))
 async def set_thumb_watermark(bot, message):
-    """Set thumbnail watermark text - FOR ALL USERS"""
+    """Set thumbnail watermark text - ALL USERS"""
     user_id = message.from_user.id
     
     if not THUMB_WATERMARK_AVAILABLE:
         return await message.reply("❌ Thumbnail Watermark module not available!")
     
-    # ✅ Check if user has channel setup
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -554,10 +539,8 @@ async def set_thumb_watermark(bot, message):
     
     watermark_text = message.text.split(" ", 1)[1]
     
-    # Update config
     Rkn_Bots.THUMB_WATERMARK_TEXT = watermark_text
     
-    # Update global watermark instance
     if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
         thumb_watermark.settings["text"] = watermark_text
     
@@ -569,13 +552,12 @@ async def set_thumb_watermark(bot, message):
 
 @Client.on_message(filters.private & filters.command("thumbwmsettings"))
 async def thumb_wm_settings(bot, message):
-    """Show and manage thumbnail watermark settings - FOR ALL USERS"""
+    """Show and manage thumbnail watermark settings - ALL USERS"""
     user_id = message.from_user.id
     
     if not THUMB_WATERMARK_AVAILABLE:
         return await message.reply("❌ Thumbnail Watermark module not available!")
     
-    # ✅ Check if user has channel setup
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -613,13 +595,12 @@ async def thumb_wm_settings(bot, message):
 
 @Client.on_message(filters.private & filters.command("thumbwmpreview"))
 async def thumb_wm_preview_cmd(bot, message):
-    """Preview thumbnail watermark - FOR ALL USERS"""
+    """Preview thumbnail watermark - ALL USERS"""
     user_id = message.from_user.id
     
     if not THUMB_WATERMARK_AVAILABLE:
         return await message.reply("❌ Thumbnail Watermark module not available!")
     
-    # ✅ Check if user has channel setup
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -634,13 +615,12 @@ async def thumb_wm_preview_cmd(bot, message):
 
 @Client.on_message(filters.private & filters.command("thumbwmenable"))
 async def thumb_wm_enable(bot, message):
-    """Enable thumbnail watermark - FOR ALL USERS"""
+    """Enable thumbnail watermark - ALL USERS"""
     user_id = message.from_user.id
     
     if not THUMB_WATERMARK_AVAILABLE:
         return await message.reply("❌ Thumbnail Watermark module not available!")
     
-    # ✅ Check if user has channel setup
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -659,13 +639,12 @@ async def thumb_wm_enable(bot, message):
 
 @Client.on_message(filters.private & filters.command("thumbwmdisable"))
 async def thumb_wm_disable(bot, message):
-    """Disable thumbnail watermark - FOR ALL USERS"""
+    """Disable thumbnail watermark - ALL USERS"""
     user_id = message.from_user.id
     
     if not THUMB_WATERMARK_AVAILABLE:
         return await message.reply("❌ Thumbnail Watermark module not available!")
     
-    # ✅ Check if user has channel setup
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
         return await message.reply(
@@ -696,13 +675,12 @@ async def get_channel_owner_or_admin(bot, channel_id):
     
     return None
 
-# ==================== AUTO SET CHANNEL WITH OWNER DETECTION ====================
+# ==================== AUTO SET CHANNEL ====================
 
 async def auto_set_channel(bot, message):
-    """Auto set channel when user sends command in channel - detects channel owner/admin"""
+    """Auto set channel when user sends command in channel"""
     channel_id = message.chat.id
     
-    # ✅ Check if bot is admin in channel
     is_admin = await check_bot_admin(bot, channel_id)
     
     if not is_admin:
@@ -716,43 +694,35 @@ async def auto_set_channel(bot, message):
         )
         return None
     
-    # ✅ Get user ID
     user_id = None
     
-    # Method 1: Reply message
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
     
-    # Method 2: Channel owner/admin
     if not user_id:
         owner_id = await get_channel_owner_or_admin(bot, channel_id)
         if owner_id:
             user_id = owner_id
             print(f"👤 Found channel owner/admin: {user_id}")
     
-    # Method 3: Channel ID as fallback
     if not user_id:
         user_id = channel_id
         print(f"⚠️ Using channel ID as user ID: {user_id}")
     
     print(f"👤 Final User ID: {user_id}")
     
-    # ✅ Check if channel already exists
     chkData = await getChannelDataByUser(user_id)
     
     if chkData and chkData.get("chnl_id") == channel_id:
         return channel_id
     
-    # ✅ Delete old channel data
     if chkData:
         await chnl_ids.delete_many({"user_id": user_id})
         await chnl_ids.delete_many({"chnl_id": chkData.get("chnl_id")})
     
-    # ✅ Save new channel
     await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
     await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
-    # ✅ Get channel title
     channel_title = None
     try:
         chat = await bot.get_chat(channel_id)
@@ -760,7 +730,6 @@ async def auto_set_channel(bot, message):
     except:
         pass
     
-    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.channel_setup(user_id, channel_id, channel_title)
@@ -1112,7 +1081,6 @@ async def status_cmd(bot, message):
     btn_count = len(buttons_data)
     btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
     
-    # Watermark status
     wm_status = ""
     if THUMB_WATERMARK_AVAILABLE:
         wm_status = f"\n\n🖼️ **Thumbnail Watermark:** {'✅ Enabled' if (hasattr(Rkn_Bots, 'THUMB_WATERMARK_ENABLED') and Rkn_Bots.THUMB_WATERMARK_ENABLED) else '❌ Disabled'}"
@@ -1152,7 +1120,7 @@ async def help_cmd(bot, message):
 ❌ `/delcaption` - Delete caption
 🗑️ `/remove_buttons` - Remove buttons
 
-**📋 Commands (Private):**
+**📋 Commands (Private - All Users):**
 📊 `/status` - Check settings
 📢 `/help` - Show this help
 
@@ -1237,7 +1205,7 @@ async def auto_edit_caption(bot, message):
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
                     
-                    # ============ 🎯 THUMBNAIL WATERMARK FOR VIDEOS ============
+                    # ============ THUMBNAIL WATERMARK FOR VIDEOS ============
                     if file_type == "video" and THUMB_WATERMARK_AVAILABLE:
                         try:
                             if hasattr(Rkn_Bots, 'THUMB_WATERMARK_ENABLED') and Rkn_Bots.THUMB_WATERMARK_ENABLED:
