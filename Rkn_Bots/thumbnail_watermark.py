@@ -14,7 +14,7 @@ class ThumbnailWatermark:
         # ════════════════════════════════════════════
         # 🔧 WATERMARK SETTINGS - YAHAN CHANGE KAREIN
         # ════════════════════════════════════════════
-        self.font_size_ratio = 8       # Font size control
+        self.font_size_ratio = 20       # Font size control
         self.font_size_min = 20        
         self.font_size_max = 60
         
