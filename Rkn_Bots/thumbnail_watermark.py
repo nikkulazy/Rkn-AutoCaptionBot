@@ -1,10 +1,9 @@
-# thumbnail_watermark.py - Fixed Thumbnail Replace
+# thumbnail_watermark.py - Fixed Position, Background & Brightness
 # (c) @RknDeveloperr
 
 import os
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
-from pyrogram.types import InputMediaPhoto
 
 class ThumbnailWatermark:
     def __init__(self, bot):
@@ -12,7 +11,26 @@ class ThumbnailWatermark:
         self.temp_dir = "thumb_watermark"
         os.makedirs(self.temp_dir, exist_ok=True)
         
-        # Always Center and White
+        # ════════════════════════════════════════════
+        # 🔧 WATERMARK SETTINGS - YAHAN CHANGE KAREIN
+        # ════════════════════════════════════════════
+        self.font_size_ratio = 8       # Font size control
+        self.font_size_min = 20        
+        self.font_size_max = 60
+        
+        # 🎯 Position Offset (Center se thoda neeche)
+        self.position_offset_y = 30    # 30px neeche (increase for more down)
+        
+        # 🎨 Background Settings
+        self.bg_enabled = True         # Background on/off
+        self.bg_opacity = 80           # 🔥 80 = Light (was 150, 0=transparent, 255=dark)
+        self.bg_padding = 20           # Background box padding
+        
+        # ✨ Text Settings
+        self.text_opacity = 255        # 🔥 255 = Fully Bright White (was 255, same but ensure)
+        self.text_color = (255, 255, 255, 255)  # Bright White
+        # ════════════════════════════════════════════
+        
         self.settings = {
             "enabled": False,
             "text": "",
@@ -36,7 +54,7 @@ class ThumbnailWatermark:
             return None
     
     async def add_watermark(self, image_path, text):
-        """Add watermark to thumbnail image - Always Center and White"""
+        """Add watermark to thumbnail image - Center + Down, Light Background, Bright White"""
         try:
             if not text:
                 return image_path
@@ -48,14 +66,14 @@ class ThumbnailWatermark:
             img = Image.open(image_path).convert("RGBA")
             print(f"📐 Image size: {img.size}")
             
+            # Calculate font size
+            font_size = int(min(img.size) / self.font_size_ratio)
+            font_size = max(self.font_size_min, min(font_size, self.font_size_max))
+            print(f"🔤 Font size: {font_size}")
+            
             # Create watermark layer
             watermark = Image.new("RGBA", img.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(watermark)
-            
-            # Calculate font size
-            font_size = int(min(img.size) / 12)
-            font_size = max(10, min(font_size, 40))
-            print(f"🔤 Font size: {font_size}")
             
             try:
                 font = ImageFont.truetype("arial.ttf", font_size)
@@ -72,32 +90,35 @@ class ThumbnailWatermark:
             text_height = bbox[3] - bbox[1]
             print(f"📏 Text size: {text_width}x{text_height}")
             
-            # Always Center
+            # 🎯 Position: Center + Down (Y offset)
             x = (img.width - text_width) // 2
-            y = (img.height - text_height) // 2
-            print(f"📍 Position: ({x}, {y})")
+            y = (img.height - text_height) // 2 + self.position_offset_y
+            print(f"📍 Position: ({x}, {y}) [Center + {self.position_offset_y}px down]")
             
-            # Background box
-            box_padding = 20
-            draw.rectangle(
-                [x - box_padding, y - box_padding, 
-                 x + text_width + box_padding, y + text_height + box_padding],
-                fill=(0, 0, 0, 150)
-            )
-            print("📦 Added background box")
+            # 🎨 Background Box (Lighter)
+            if self.bg_enabled:
+                box_padding = self.bg_padding
+                # 🔥 Light Background with less opacity
+                bg_opacity = self.bg_opacity  # 80 = Light
+                draw.rectangle(
+                    [x - box_padding, y - box_padding, 
+                     x + text_width + box_padding, y + text_height + box_padding],
+                    fill=(0, 0, 0, bg_opacity)  # Light black background
+                )
+                print(f"📦 Added background box (opacity: {bg_opacity})")
             
-            # Shadow
-            shadow_offset = 3
+            # ✨ Shadow (thoda light)
+            shadow_offset = 2
             draw.text(
                 (x + shadow_offset, y + shadow_offset),
                 text,
                 font=font,
-                fill=(0, 0, 0, 200)
+                fill=(0, 0, 0, 150)  # Shadow
             )
             
-            # Always White
+            # ✨ Bright White Text (Fully White)
             draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
-            print("✅ Watermark drawn successfully")
+            print("✅ Bright white text drawn successfully")
             
             # Composite
             combined = Image.alpha_composite(img, watermark)
@@ -116,7 +137,7 @@ class ThumbnailWatermark:
             return image_path
     
     async def process_thumbnail(self, message, text):
-        """Process thumbnail with watermark and REPLACE original"""
+        """Process thumbnail with watermark"""
         try:
             if not text:
                 return None
@@ -135,7 +156,7 @@ class ThumbnailWatermark:
             if watermarked_path and os.path.exists(watermarked_path):
                 print(f"✅ Watermarked: {watermarked_path}")
                 
-                # 🔥 IMPORTANT: Rename watermarked to original
+                # Rename watermarked to original
                 os.rename(watermarked_path, thumb_path)
                 print(f"📝 Renamed watermarked to: {thumb_path}")
                 
@@ -157,13 +178,11 @@ class ThumbnailWatermark:
             
             print(f"🔄 Replacing thumbnail for message: {message.id}")
             
-            # Get video file_id
             if not message.video:
                 return False
             
-            video_file_id = message.video.file_id
+            from pyrogram.types import InputMediaPhoto
             
-            # 🔥 IMPORTANT: Edit message with new thumbnail
             await self.bot.edit_message_media(
                 chat_id=message.chat.id,
                 message_id=message.id,
