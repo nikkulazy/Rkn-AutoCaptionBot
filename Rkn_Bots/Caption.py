@@ -16,7 +16,6 @@ from .logger import Logger
 # ==================== THUMBNAIL WATERMARK IMPORT ====================
 try:
     from .thumbnail_watermark import thumb_watermark, init_thumb_watermark
-    from config import Rkn_Bots as Config
     THUMB_WATERMARK_AVAILABLE = True
     print("✅ Thumbnail Watermark loaded successfully!")
 except ImportError as e:
@@ -923,15 +922,32 @@ async def auto_edit_caption(bot, message):
                             
                             if watermark_text and hasattr(bot, 'thumb_watermark') and bot.thumb_watermark:
                                 print(f"🖼️ Adding watermark for channel {chnl_id}: {watermark_text}")
+                                
+                                # Process thumbnail
                                 watermarked_thumb = await bot.thumb_watermark.process_thumbnail(message, watermark_text)
+                                
                                 if watermarked_thumb and os.path.exists(watermarked_thumb):
                                     print(f"✅ Thumbnail watermarked: {watermarked_thumb}")
+                                    
+                                    # 🔥 IMPORTANT: Upload watermarked thumbnail as document
+                                    try:
+                                        await message.reply_document(
+                                            document=watermarked_thumb,
+                                            caption="🖼️ Watermarked Thumbnail"
+                                        )
+                                        print("✅ Watermarked thumbnail uploaded!")
+                                    except Exception as e:
+                                        print(f"⚠️ Could not upload watermarked thumbnail: {e}")
+                                    
+                                    # Cleanup
                                     try:
                                         os.remove(watermarked_thumb)
                                     except:
                                         pass
                         except Exception as e:
                             print(f"❌ Thumbnail watermark error: {e}")
+                            import traceback
+                            traceback.print_exc()
                     
                     if cap_dets:
                         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
