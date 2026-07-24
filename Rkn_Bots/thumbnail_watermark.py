@@ -19,7 +19,7 @@ class ThumbnailWatermark:
         self.font_size_max = 60
         
         # 🎯 Position Offset (Center se thoda neeche)
-        self.position_offset_y = 10    # 30px neeche (increase for more down)
+        self.position_offset_y = 60    # 30px neeche (increase for more down)
         
         # 🎨 Background Settings
         self.bg_enabled = True         # Background on/off
