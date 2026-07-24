@@ -1,4 +1,4 @@
-# Caption.py - Complete Auto Caption Bot with Thumbnail Watermark (All Users)
+# Caption.py - Fixed Message ID Invalid Error
 # (c) @RknDeveloperr
 
 from pyrogram import Client, filters, errors, types, enums
@@ -142,13 +142,14 @@ async def callback_handler(bot, callback_query):
         await callback_query.answer("Message not found!")
         return
     
-    try:
-        await callback_query.message.delete()
-    except:
-        pass
-    
     # ==================== BACK TO MENU ====================
     if data == "back_to_menu":
+        # Delete old message and send new
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
         buttons = await main_menu_buttons()
         caption = await get_home_caption(user_id, first_name)
         
@@ -168,6 +169,11 @@ async def callback_handler(bot, callback_query):
     
     # ==================== SET CAPTION ====================
     elif data == "set_caption":
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
         buttons = await back_button_only()
         await callback_query.message.reply_text(
             f"**📝 How to Set Caption**\n\n"
@@ -186,6 +192,11 @@ async def callback_handler(bot, callback_query):
     
     # ==================== ADD BUTTON ====================
     elif data == "add_button":
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
         buttons = await back_button_only()
         await callback_query.message.reply_text(
             f"**📎 How to Add Buttons**\n\n"
@@ -217,6 +228,11 @@ async def callback_handler(bot, callback_query):
         if not chkData:
             await callback_query.answer("❌ Please setup your channel first!", show_alert=True)
             return
+        
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
         
         settings_text = await get_thumb_wm_settings_text()
         
@@ -285,7 +301,13 @@ async def handle_thumb_wm_callback(bot, callback_query):
     
     option = data.replace("thumbwm_", "")
     
+    # Position options
     if option == "position":
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
         buttons = types.InlineKeyboardMarkup([
             [types.InlineKeyboardButton("⬆️ Top-Left", callback_data="thumbwm_pos_tl")],
             [types.InlineKeyboardButton("⬆️ Top-Right", callback_data="thumbwm_pos_tr")],
@@ -294,13 +316,14 @@ async def handle_thumb_wm_callback(bot, callback_query):
             [types.InlineKeyboardButton("🎯 Center", callback_data="thumbwm_pos_center")],
             [types.InlineKeyboardButton("🔙 Back", callback_data="thumb_wm_menu")]
         ])
-        await callback_query.message.edit_text(
+        await callback_query.message.reply_text(
             "📍 **Select Position:**\n\nChoose where to place the watermark:",
             reply_markup=buttons
         )
         await callback_query.answer()
         return
     
+    # Position set
     if option.startswith("pos_"):
         position = option.replace("pos_", "")
         position_map = {
@@ -315,15 +338,28 @@ async def handle_thumb_wm_callback(bot, callback_query):
             if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
                 thumb_watermark.settings["position"] = position_map[position]
             await callback_query.answer(f"✅ Position set to {position_map[position]}")
-            await show_thumb_settings_menu(bot, callback_query)
+            
+            try:
+                await callback_query.message.delete()
+            except:
+                pass
+            
+            await show_thumb_settings_menu(bot, callback_query.message)
         return
     
+    # Enable/Disable
     if option == "enable":
         Rkn_Bots.THUMB_WATERMARK_ENABLED = True
         if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
             thumb_watermark.settings["enabled"] = True
         await callback_query.answer("✅ Watermark enabled")
-        await show_thumb_settings_menu(bot, callback_query)
+        
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
+        await show_thumb_settings_menu(bot, callback_query.message)
         return
     
     if option == "disable":
@@ -331,9 +367,16 @@ async def handle_thumb_wm_callback(bot, callback_query):
         if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
             thumb_watermark.settings["enabled"] = False
         await callback_query.answer("❌ Watermark disabled")
-        await show_thumb_settings_menu(bot, callback_query)
+        
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
+        await show_thumb_settings_menu(bot, callback_query.message)
         return
     
+    # Shadow toggle
     if option == "shadow":
         current = Rkn_Bots.THUMB_WATERMARK_SHADOW if hasattr(Rkn_Bots, 'THUMB_WATERMARK_SHADOW') else True
         Rkn_Bots.THUMB_WATERMARK_SHADOW = not current
@@ -341,14 +384,22 @@ async def handle_thumb_wm_callback(bot, callback_query):
             thumb_watermark.settings["shadow"] = not current
         status = "enabled" if Rkn_Bots.THUMB_WATERMARK_SHADOW else "disabled"
         await callback_query.answer(f"✅ Shadow {status}")
-        await show_thumb_settings_menu(bot, callback_query)
+        
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
+        await show_thumb_settings_menu(bot, callback_query.message)
         return
     
+    # Preview
     if option == "preview":
         await callback_query.answer("🔄 Generating preview...")
         await thumb_wm_preview(bot, callback_query.message)
         return
     
+    # Other options - show value input prompt
     if option in ["text", "size", "opacity", "color", "bg"]:
         prompt_map = {
             "text": "📝 **Enter new watermark text:**\n\nExample: `📢 @wolverine273`\n\nSend text as reply:",
@@ -358,14 +409,19 @@ async def handle_thumb_wm_callback(bot, callback_query):
             "bg": "📦 **Enter background:**\n\nOptions: `transparent`, `black`, `white`\n\nSend option as reply:"
         }
         
-        await callback_query.message.edit_text(
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
+        
+        await callback_query.message.reply_text(
             f"{prompt_map.get(option, 'Enter value:')}\n\n"
             f"⚠️ Reply with the value in this chat."
         )
         await callback_query.answer()
         return
 
-async def show_thumb_settings_menu(bot, callback_query):
+async def show_thumb_settings_menu(bot, message):
     """Show thumbnail watermark settings menu"""
     settings_text = await get_thumb_wm_settings_text()
     
@@ -385,13 +441,12 @@ async def show_thumb_settings_menu(bot, callback_query):
         [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
     ])
     
-    await callback_query.message.edit_text(
+    await message.reply_text(
         f"**🎨 Thumbnail Watermark Settings**\n\n"
         f"{settings_text}\n\n"
         f"Select an option below:",
         reply_markup=buttons
     )
-    await callback_query.answer()
 
 async def thumb_wm_preview(bot, message):
     """Preview thumbnail watermark"""
@@ -568,30 +623,7 @@ async def thumb_wm_settings(bot, message):
             f"3. Then use this command again!"
         )
     
-    settings_text = await get_thumb_wm_settings_text()
-    
-    buttons = types.InlineKeyboardMarkup([
-        [types.InlineKeyboardButton("📝 Change Text", callback_data="thumbwm_text")],
-        [types.InlineKeyboardButton("📍 Position", callback_data="thumbwm_position")],
-        [types.InlineKeyboardButton("📏 Font Size", callback_data="thumbwm_size")],
-        [types.InlineKeyboardButton("🎨 Opacity", callback_data="thumbwm_opacity")],
-        [types.InlineKeyboardButton("🌈 Color", callback_data="thumbwm_color")],
-        [types.InlineKeyboardButton("👻 Shadow", callback_data="thumbwm_shadow")],
-        [types.InlineKeyboardButton("📦 Background", callback_data="thumbwm_bg")],
-        [types.InlineKeyboardButton("✅ Enable" if not Rkn_Bots.THUMB_WATERMARK_ENABLED else "✅ Enabled", 
-                                   callback_data="thumbwm_enable"),
-         types.InlineKeyboardButton("❌ Disable" if Rkn_Bots.THUMB_WATERMARK_ENABLED else "❌ Disabled", 
-                                   callback_data="thumbwm_disable")],
-        [types.InlineKeyboardButton("👁️ Preview", callback_data="thumbwm_preview")],
-        [types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
-    ])
-    
-    await message.reply(
-        f"**🎨 Thumbnail Watermark Settings**\n\n"
-        f"{settings_text}\n\n"
-        f"Select an option below:",
-        reply_markup=buttons
-    )
+    await show_thumb_settings_menu(bot, message)
 
 @Client.on_message(filters.private & filters.command("thumbwmpreview"))
 async def thumb_wm_preview_cmd(bot, message):
