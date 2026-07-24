@@ -200,7 +200,6 @@ class ThumbnailWatermark:
         """Update a single setting"""
         if key in self.settings:
             self.settings[key] = value
-            # Also update config
             if hasattr(Rkn_Bots, f'THUMB_WATERMARK_{key.upper()}'):
                 setattr(Rkn_Bots, f'THUMB_WATERMARK_{key.upper()}', value)
             return True
@@ -218,18 +217,14 @@ async def init_thumb_watermark(bot):
 async def create_sample_thumbnail():
     """Create a sample thumbnail for preview"""
     try:
-        # Create temp directory
         temp_dir = "thumb_watermark"
         os.makedirs(temp_dir, exist_ok=True)
         
-        # Create a sample image
         img = Image.new('RGB', (640, 360), color='#1a1a2e')
         draw = ImageDraw.Draw(img)
         
-        # Draw some shapes
         draw.rectangle([50, 50, 590, 310], outline='#e94560', width=3)
         
-        # Add sample text
         try:
             font = ImageFont.truetype("arial.ttf", 30)
         except:
@@ -238,7 +233,6 @@ async def create_sample_thumbnail():
         draw.text((320, 160), "🎬 SAMPLE VIDEO", font=font, fill='white', anchor="mm")
         draw.text((320, 210), "Thumbnail Preview", font=font, fill='#e94560', anchor="mm")
         
-        # Save
         path = f"{temp_dir}/sample_thumb_{datetime.now().timestamp()}.jpg"
         img.save(path, quality=95)
         
