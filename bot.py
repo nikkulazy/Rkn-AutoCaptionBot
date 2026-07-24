@@ -72,7 +72,6 @@ class Rkn_AutoCaptionBot(Client):
         )
         self.is_running = True
         self.web_app = None
-        self.web_runner = None
         self.thumb_watermark = None
 
     async def start(self):
@@ -130,28 +129,19 @@ class Rkn_AutoCaptionBot(Client):
         print(f"\n{'='*50}")
         print(f"✅ {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️")
         print(f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}")
-        if THUMB_WATERMARK_AVAILABLE and hasattr(Rkn_Bots, 'THUMB_WATERMARK_ENABLED'):
-            wm_status = "✅ Enabled" if Rkn_Bots.THUMB_WATERMARK_ENABLED else "❌ Disabled"
-            print(f"🖼️ Thumbnail Watermark: {wm_status}")
         print(f"{'='*50}\n")
         
         # Notify Admins
         for admin_id in Rkn_Bots.ADMIN:
             try:
-                wm_status = ""
-                if THUMB_WATERMARK_AVAILABLE and hasattr(Rkn_Bots, 'THUMB_WATERMARK_ENABLED'):
-                    wm_status = f"\n🖼️ Thumb Watermark: {'✅' if Rkn_Bots.THUMB_WATERMARK_ENABLED else '❌'}"
-                
                 await self.send_message(
                     admin_id, 
                     f"**🚀 {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️**\n\n"
                     f"✅ Bot is now LIVE!\n"
-                    f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}{wm_status}\n\n"
-                    f"📌 **Thumbnail Watermark Commands (Send in Channel):**\n"
-                    f"• `/setthumbwm Text` - Set watermark text\n"
-                    f"• `/thumbwmenable` - Enable watermark\n"
-                    f"• `/thumbwmdisable` - Disable watermark\n"
-                    f"• `/thumbwmstatus` - Check status"
+                    f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}\n\n"
+                    f"📌 **Watermark Commands (Send in Channel):**\n"
+                    f"• `/setwatermark Text` - Set watermark\n"
+                    f"• `/removewatermark` - Remove watermark"
                 )
             except Exception as e:
                 print(f"⚠️ Could not notify admin {admin_id}: {e}")
