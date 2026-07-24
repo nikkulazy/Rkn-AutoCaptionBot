@@ -54,7 +54,7 @@ class ThumbnailWatermark:
             
             # Calculate font size
             font_size = int(min(img.size) / 6)
-            font_size = max(30, min(font_size, 8))
+            font_size = max(10, min(font_size, 80))
             print(f"🔤 Font size: {font_size}")
             
             try:
