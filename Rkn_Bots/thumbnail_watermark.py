@@ -1,9 +1,10 @@
-# thumbnail_watermark.py - Fixed Watermark Apply
+# thumbnail_watermark.py - Fixed Thumbnail Replace
 # (c) @RknDeveloperr
 
 import os
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
+from pyrogram.types import InputMediaPhoto
 
 class ThumbnailWatermark:
     def __init__(self, bot):
@@ -51,7 +52,7 @@ class ThumbnailWatermark:
             watermark = Image.new("RGBA", img.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(watermark)
             
-            # Calculate font size (auto-adjust based on image size)
+            # Calculate font size
             font_size = int(min(img.size) / 6)
             font_size = max(30, min(font_size, 80))
             print(f"🔤 Font size: {font_size}")
@@ -76,7 +77,7 @@ class ThumbnailWatermark:
             y = (img.height - text_height) // 2
             print(f"📍 Position: ({x}, {y})")
             
-            # Background box for better visibility
+            # Background box
             box_padding = 20
             draw.rectangle(
                 [x - box_padding, y - box_padding, 
@@ -85,7 +86,7 @@ class ThumbnailWatermark:
             )
             print("📦 Added background box")
             
-            # Shadow for better visibility
+            # Shadow
             shadow_offset = 3
             draw.text(
                 (x + shadow_offset, y + shadow_offset),
@@ -134,14 +135,7 @@ class ThumbnailWatermark:
             if watermarked_path and os.path.exists(watermarked_path):
                 print(f"✅ Watermarked: {watermarked_path}")
                 
-                # 🔥 IMPORTANT: Delete original and rename watermarked
-                try:
-                    os.remove(thumb_path)
-                    print(f"🗑️ Deleted original: {thumb_path}")
-                except:
-                    pass
-                
-                # Rename watermarked to original name
+                # 🔥 IMPORTANT: Rename watermarked to original
                 os.rename(watermarked_path, thumb_path)
                 print(f"📝 Renamed watermarked to: {thumb_path}")
                 
@@ -154,6 +148,36 @@ class ThumbnailWatermark:
             import traceback
             traceback.print_exc()
             return None
+
+    async def replace_thumbnail(self, message, thumb_path):
+        """Replace video thumbnail with watermarked one"""
+        try:
+            if not thumb_path or not os.path.exists(thumb_path):
+                return False
+            
+            print(f"🔄 Replacing thumbnail for message: {message.id}")
+            
+            # Get video file_id
+            if not message.video:
+                return False
+            
+            video_file_id = message.video.file_id
+            
+            # 🔥 IMPORTANT: Edit message with new thumbnail
+            await self.bot.edit_message_media(
+                chat_id=message.chat.id,
+                message_id=message.id,
+                media=InputMediaPhoto(
+                    media=thumb_path,
+                    caption=message.caption or ""
+                )
+            )
+            print("✅ Thumbnail replaced successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Replace thumbnail error: {e}")
+            return False
 
 # ==================== GLOBAL INSTANCE ====================
 
