@@ -1,14 +1,9 @@
-# thumbnail_watermark.py - Complete Thumbnail Watermark System
+# thumbnail_watermark.py - Simple Thumbnail Watermark System
 # (c) @RknDeveloperr
 
 import os
-import asyncio
-import aiohttp
-import io
 from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont, ImageOps
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from config import Rkn_Bots
+from PIL import Image, ImageDraw, ImageFont
 
 class ThumbnailWatermark:
     def __init__(self, bot):
@@ -16,17 +11,12 @@ class ThumbnailWatermark:
         self.temp_dir = "thumb_watermark"
         os.makedirs(self.temp_dir, exist_ok=True)
         
-        # Load settings from config
+        # Always Center and White
         self.settings = {
-            "enabled": Rkn_Bots.THUMB_WATERMARK_ENABLED if hasattr(Rkn_Bots, 'THUMB_WATERMARK_ENABLED') else True,
-            "text": Rkn_Bots.THUMB_WATERMARK_TEXT if hasattr(Rkn_Bots, 'THUMB_WATERMARK_TEXT') else "📢 @WOLVERIN_P",
-            "position": Rkn_Bots.THUMB_WATERMARK_POSITION if hasattr(Rkn_Bots, 'THUMB_WATERMARK_POSITION') else "bottom-right",
-            "font_size": Rkn_Bots.THUMB_WATERMARK_FONT_SIZE if hasattr(Rkn_Bots, 'THUMB_WATERMARK_FONT_SIZE') else 20,
-            "opacity": Rkn_Bots.THUMB_WATERMARK_OPACITY if hasattr(Rkn_Bots, 'THUMB_WATERMARK_OPACITY') else 70,
-            "color": Rkn_Bots.THUMB_WATERMARK_COLOR if hasattr(Rkn_Bots, 'THUMB_WATERMARK_COLOR') else "white",
-            "shadow": Rkn_Bots.THUMB_WATERMARK_SHADOW if hasattr(Rkn_Bots, 'THUMB_WATERMARK_SHADOW') else True,
-            "background": Rkn_Bots.THUMB_WATERMARK_BACKGROUND if hasattr(Rkn_Bots, 'THUMB_WATERMARK_BACKGROUND') else "transparent",
-            "padding": 10
+            "enabled": False,
+            "text": "",
+            "position": "center",
+            "color": "white"
         }
     
     async def download_thumbnail(self, message):
@@ -44,30 +34,22 @@ class ThumbnailWatermark:
             print(f"❌ Thumbnail download error: {e}")
             return None
     
-    async def add_watermark(self, image_path, settings=None):
-        """Add watermark to thumbnail image"""
+    async def add_watermark(self, image_path, text):
+        """Add watermark to thumbnail image - Always Center and White"""
         try:
-            if settings:
-                self.settings.update(settings)
-            
-            if not self.settings["enabled"]:
+            if not text:
                 return image_path
             
             # Open image
             img = Image.open(image_path).convert("RGBA")
             
-            # Resize if too large
-            max_size = 1280
-            if img.width > max_size or img.height > max_size:
-                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-            
             # Create watermark layer
             watermark = Image.new("RGBA", img.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(watermark)
             
-            # Calculate font size
-            font_size = int(min(img.size) * (self.settings["font_size"] / 100))
-            font_size = max(10, min(font_size, 80))
+            # Calculate font size (auto-adjust based on image size)
+            font_size = int(min(img.size) / 8)
+            font_size = max(20, min(font_size, 60))
             
             try:
                 font = ImageFont.truetype("arial.ttf", font_size)
@@ -78,76 +60,30 @@ class ThumbnailWatermark:
                     font = ImageFont.load_default()
             
             # Get text dimensions
-            text = self.settings["text"]
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             
-            # Calculate position
-            padding = self.settings["padding"]
-            position = self.settings["position"]
+            # Always Center
+            x = (img.width - text_width) // 2
+            y = (img.height - text_height) // 2
             
-            if position == "top-left":
-                x = padding
-                y = padding
-            elif position == "top-right":
-                x = img.width - text_width - padding
-                y = padding
-            elif position == "bottom-left":
-                x = padding
-                y = img.height - text_height - padding
-            elif position == "bottom-right":
-                x = img.width - text_width - padding
-                y = img.height - text_height - padding
-            elif position == "center":
-                x = (img.width - text_width) // 2
-                y = (img.height - text_height) // 2
-            else:
-                x = img.width - text_width - padding
-                y = img.height - text_height - padding
+            # Shadow for better visibility
+            shadow_offset = 2
+            draw.text(
+                (x + shadow_offset, y + shadow_offset),
+                text,
+                font=font,
+                fill=(0, 0, 0, 128)
+            )
             
-            # Background box
-            if self.settings["background"] != "transparent":
-                bg_color = (0, 0, 0, 180) if self.settings["background"] == "black" else (255, 255, 255, 180)
-                box_padding = 10
-                draw.rectangle(
-                    [x - box_padding, y - box_padding, 
-                     x + text_width + box_padding, y + text_height + box_padding],
-                    fill=bg_color
-                )
-            
-            # Shadow
-            if self.settings["shadow"]:
-                shadow_offset = 2
-                draw.text(
-                    (x + shadow_offset, y + shadow_offset),
-                    text,
-                    font=font,
-                    fill=(0, 0, 0, 128)
-                )
-            
-            # Main text
-            opacity = int(255 * (self.settings["opacity"] / 100))
-            color = self.settings["color"].lower()
-            
-            color_map = {
-                "white": (255, 255, 255, opacity),
-                "black": (0, 0, 0, opacity),
-                "red": (255, 0, 0, opacity),
-                "blue": (0, 0, 255, opacity),
-                "green": (0, 255, 0, opacity),
-                "yellow": (255, 255, 0, opacity),
-                "orange": (255, 165, 0, opacity),
-                "purple": (128, 0, 128, opacity)
-            }
-            
-            text_color = color_map.get(color, (255, 255, 255, opacity))
-            draw.text((x, y), text, font=font, fill=text_color)
+            # Always White
+            draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
             
             # Composite
             combined = Image.alpha_composite(img, watermark)
             
-            # Convert back
+            # Save
             output_path = image_path.replace(".jpg", "_watermarked.jpg")
             combined.convert("RGB").save(output_path, quality=95)
             
@@ -157,16 +93,19 @@ class ThumbnailWatermark:
             print(f"❌ Watermark error: {e}")
             return image_path
     
-    async def process_thumbnail(self, message):
+    async def process_thumbnail(self, message, text):
         """Process thumbnail with watermark"""
         try:
+            if not text:
+                return None
+            
             # Download thumbnail
             thumb_path = await self.download_thumbnail(message)
             if not thumb_path:
                 return None
             
             # Add watermark
-            watermarked_path = await self.add_watermark(thumb_path)
+            watermarked_path = await self.add_watermark(thumb_path, text)
             
             # Clean up original
             try:
@@ -179,33 +118,8 @@ class ThumbnailWatermark:
         except Exception as e:
             print(f"❌ Process thumbnail error: {e}")
             return None
-    
-    async def get_settings_preview(self):
-        """Get current settings for preview"""
-        return f"""
-📋 **Thumbnail Watermark Settings**
 
-🎯 **Status:** {'✅ Enabled' if self.settings['enabled'] else '❌ Disabled'}
-📝 **Text:** `{self.settings['text']}`
-📍 **Position:** {self.settings['position']}
-📏 **Font Size:** {self.settings['font_size']}%
-🎨 **Opacity:** {self.settings['opacity']}%
-🌈 **Color:** {self.settings['color']}
-👻 **Shadow:** {'✅' if self.settings['shadow'] else '❌'}
-📦 **Background:** {self.settings['background']}
-🔲 **Padding:** {self.settings['padding']}px
-"""
-
-    async def update_setting(self, key, value):
-        """Update a single setting"""
-        if key in self.settings:
-            self.settings[key] = value
-            if hasattr(Rkn_Bots, f'THUMB_WATERMARK_{key.upper()}'):
-                setattr(Rkn_Bots, f'THUMB_WATERMARK_{key.upper()}', value)
-            return True
-        return False
-
-# ==================== HELPER FUNCTIONS ====================
+# ==================== GLOBAL INSTANCE ====================
 
 thumb_watermark = None
 
@@ -213,31 +127,3 @@ async def init_thumb_watermark(bot):
     global thumb_watermark
     thumb_watermark = ThumbnailWatermark(bot)
     return thumb_watermark
-
-async def create_sample_thumbnail():
-    """Create a sample thumbnail for preview"""
-    try:
-        temp_dir = "thumb_watermark"
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        img = Image.new('RGB', (640, 360), color='#1a1a2e')
-        draw = ImageDraw.Draw(img)
-        
-        draw.rectangle([50, 50, 590, 310], outline='#e94560', width=3)
-        
-        try:
-            font = ImageFont.truetype("arial.ttf", 30)
-        except:
-            font = ImageFont.load_default()
-        
-        draw.text((320, 160), "🎬 SAMPLE VIDEO", font=font, fill='white', anchor="mm")
-        draw.text((320, 210), "Thumbnail Preview", font=font, fill='#e94560', anchor="mm")
-        
-        path = f"{temp_dir}/sample_thumb_{datetime.now().timestamp()}.jpg"
-        img.save(path, quality=95)
-        
-        return path
-        
-    except Exception as e:
-        print(f"❌ Sample creation error: {e}")
-        return None
