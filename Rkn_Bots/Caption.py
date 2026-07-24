@@ -1,4 +1,4 @@
-# Caption.py - Complete with Channel Watermark Commands
+# Caption.py - Complete with Simple 2 Command Watermark
 # (c) @RknDeveloperr
 
 from pyrogram import Client, filters, errors, types, enums
@@ -9,78 +9,59 @@ from .database import addCap, updateCap, updateButtons, deleteButtons, getChanne
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from .database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
-from datetime import datetime
 
 # ==================== ADD LOGGER IMPORT ====================
 from .logger import Logger
 
 # ==================== THUMBNAIL WATERMARK IMPORT ====================
 try:
-    from .thumbnail_watermark import thumb_watermark, init_thumb_watermark, create_sample_thumbnail
+    from .thumbnail_watermark import thumb_watermark, init_thumb_watermark
     from config import Rkn_Bots as Config
     THUMB_WATERMARK_AVAILABLE = True
     print("✅ Thumbnail Watermark loaded successfully!")
 except ImportError as e:
     print(f"⚠️ Thumbnail Watermark not found: {e}")
     THUMB_WATERMARK_AVAILABLE = False
-    async def create_sample_thumbnail():
-        return None
 
 print("🔄 Loading Caption.py...")
 
-# ==================== DATABASE FUNCTIONS FOR WATERMARK ====================
-
-async def update_channel_watermark(channel_id, text):
-    """Update watermark for specific channel"""
-    try:
-        collection = chnl_ids
-        await collection.update_one(
-            {"chnl_id": channel_id},
-            {"$set": {
-                "watermark_text": text,
-                "watermark_enabled": True,
-                "watermark_updated": datetime.now().isoformat()
-            }},
-            upsert=True
-        )
-        print(f"✅ Watermark saved for channel {channel_id}: {text}")
-        return True
-    except Exception as e:
-        print(f"❌ Error saving watermark: {e}")
-        return False
-
-async def update_channel_watermark_status(channel_id, enabled):
-    """Update watermark status for specific channel"""
-    try:
-        collection = chnl_ids
-        await collection.update_one(
-            {"chnl_id": channel_id},
-            {"$set": {
-                "watermark_enabled": enabled,
-                "watermark_updated": datetime.now().isoformat()
-            }},
-            upsert=True
-        )
-        print(f"✅ Watermark status updated for channel {channel_id}: {enabled}")
-        return True
-    except Exception as e:
-        print(f"❌ Error updating watermark status: {e}")
-        return False
+# ==================== WATERMARK DATABASE FUNCTIONS ====================
 
 async def get_channel_watermark(channel_id):
-    """Get watermark settings for specific channel"""
+    """Get watermark text for channel"""
     try:
-        collection = chnl_ids
-        data = await collection.find_one({"chnl_id": channel_id})
+        data = await chnl_ids.find_one({"chnl_id": channel_id})
         if data:
-            return {
-                "text": data.get("watermark_text", Rkn_Bots.THUMB_WATERMARK_TEXT if hasattr(Rkn_Bots, 'THUMB_WATERMARK_TEXT') else "📢 @WOLVERIN_P"),
-                "enabled": data.get("watermark_enabled", False)
-            }
-        return None
+            return data.get("watermark_text", "")
+        return ""
     except Exception as e:
-        print(f"❌ Error getting watermark: {e}")
-        return None
+        print(f"❌ Get watermark error: {e}")
+        return ""
+
+async def save_channel_watermark(channel_id, text):
+    """Save watermark text for channel"""
+    try:
+        await chnl_ids.update_one(
+            {"chnl_id": channel_id},
+            {"$set": {"watermark_text": text}},
+            upsert=True
+        )
+        return True
+    except Exception as e:
+        print(f"❌ Save watermark error: {e}")
+        return False
+
+async def remove_channel_watermark(channel_id):
+    """Remove watermark text for channel"""
+    try:
+        await chnl_ids.update_one(
+            {"chnl_id": channel_id},
+            {"$unset": {"watermark_text": ""}}
+        )
+        return True
+    except Exception as e:
+        print(f"❌ Remove watermark error: {e}")
+        return False
 
 # ==================== MAIN MENU BUTTONS ====================
 
@@ -647,11 +628,11 @@ async def removeButtons(bot, message):
         f"Now no buttons will be shown with captions."
     )
 
-# ==================== THUMBNAIL WATERMARK COMMANDS (CHANNEL ONLY) ====================
+# ==================== WATERMARK COMMANDS ====================
 
-@Client.on_message(filters.command("setthumbwm") & (filters.channel | filters.private))
-async def set_thumb_watermark(bot, message):
-    """Set thumbnail watermark text - CHANNEL ONLY"""
+@Client.on_message(filters.command("setwatermark") & (filters.channel | filters.private))
+async def set_watermark(bot, message):
+    """Set watermark - CHANNEL ONLY"""
     
     # Agar private me aaya hai toh guide karo
     if message.chat.type == enums.ChatType.PRIVATE:
@@ -660,9 +641,10 @@ async def set_thumb_watermark(bot, message):
             f"📌 **How to use:**\n"
             f"1. Add me as admin in your channel\n"
             f"2. Go to your channel\n"
-            f"3. Send: `/setthumbwm Your watermark text`\n\n"
+            f"3. Send: `/setwatermark Your Text Here`\n\n"
             f"**Example:**\n"
-            f"`/setthumbwm 📢 @wolverine273`"
+            f"`/setwatermark @wolverine273`\n"
+            f"`/setwatermark © 2024 MyChannel`"
         )
     
     try:
@@ -671,97 +653,66 @@ async def set_thumb_watermark(bot, message):
         pass
     
     if not THUMB_WATERMARK_AVAILABLE:
-        return await message.reply("❌ Thumbnail Watermark module not available!")
+        return await message.reply("❌ Watermark module not available!")
     
-    # Channel auto-set
-    channel_id = await auto_set_channel(bot, message)
-    if channel_id is None:
-        return
-    
-    if len(message.command) < 2:
-        # Get current watermark for this channel
-        wm_data = await get_channel_watermark(channel_id)
-        current_text = wm_data.get("text", Rkn_Bots.THUMB_WATERMARK_TEXT if hasattr(Rkn_Bots, 'THUMB_WATERMARK_TEXT') else "📢 @WOLVERIN_P") if wm_data else Rkn_Bots.THUMB_WATERMARK_TEXT if hasattr(Rkn_Bots, 'THUMB_WATERMARK_TEXT') else "📢 @WOLVERIN_P"
-        
+    # Check bot is admin
+    channel_id = message.chat.id
+    is_admin = await check_bot_admin(bot, channel_id)
+    if not is_admin:
         return await message.reply(
-            f"📝 **Set Thumbnail Watermark**\n\n"
-            f"**Usage:** `/setthumbwm Your watermark text`\n\n"
-            f"**Example:**\n"
-            f"`/setthumbwm 📢 @wolverine273`\n"
-            f"`/setthumbwm © 2024 MyChannel`\n\n"
-            f"**Current Text:** `{current_text}`\n\n"
-            f"ℹ️ This will apply to ALL video thumbnails in this channel."
+            f"❌ **I'm not admin in this channel!**\n\n"
+            f"Please add me as admin first."
         )
+    
+    # Check if text provided
+    if len(message.command) < 2:
+        current_text = await get_channel_watermark(channel_id)
+        if current_text:
+            return await message.reply(
+                f"📝 **Current Watermark:**\n`{current_text}`\n\n"
+                f"**To Change:** `/setwatermark New Text`\n"
+                f"**To Remove:** `/removewatermark`\n\n"
+                f"**Example:** `/setwatermark @wolverine273`"
+            )
+        else:
+            return await message.reply(
+                f"📝 **Set Watermark**\n\n"
+                f"**Usage:** `/setwatermark Your Text Here`\n\n"
+                f"**Example:**\n"
+                f"`/setwatermark @wolverine273`\n"
+                f"`/setwatermark © 2024 MyChannel`\n\n"
+                f"⚠️ Watermark will appear **center** in **white** color on all video thumbnails."
+            )
     
     watermark_text = message.text.split(" ", 1)[1]
     
-    # Save watermark for this channel
-    success = await update_channel_watermark(channel_id, watermark_text)
+    # Save watermark
+    success = await save_channel_watermark(channel_id, watermark_text)
     
     if not success:
-        return await message.reply("❌ Failed to save watermark! Please try again.")
+        return await message.reply("❌ Failed to save watermark!")
     
     # Update global instance
-    Rkn_Bots.THUMB_WATERMARK_TEXT = watermark_text
     if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
         thumb_watermark.settings["text"] = watermark_text
-    
-    await message.reply(
-        f"✅ **Thumbnail Watermark Updated for this Channel!**\n\n"
-        f"**New Watermark:**\n`{watermark_text}`\n\n"
-        f"This will be applied to all new video thumbnails in this channel.\n\n"
-        f"🎯 **Next Steps:**\n"
-        f"• Send `/thumbwmenable` to enable\n"
-        f"• Post a video to see the watermark! 🎉"
-    )
-
-@Client.on_message(filters.command("thumbwmenable") & (filters.channel | filters.private))
-async def thumb_wm_enable(bot, message):
-    """Enable thumbnail watermark - CHANNEL ONLY"""
-    
-    if message.chat.type == enums.ChatType.PRIVATE:
-        return await message.reply(
-            f"❌ **Please use this command in your channel!**\n\n"
-            f"Go to your channel and send: `/thumbwmenable`"
-        )
-    
-    try:
-        await message.delete()
-    except:
-        pass
-    
-    if not THUMB_WATERMARK_AVAILABLE:
-        return await message.reply("❌ Thumbnail Watermark module not available!")
-    
-    channel_id = await auto_set_channel(bot, message)
-    if channel_id is None:
-        return
-    
-    # Enable watermark for this channel
-    success = await update_channel_watermark_status(channel_id, True)
-    
-    if not success:
-        return await message.reply("❌ Failed to enable watermark! Please try again.")
-    
-    # Global enable
-    Rkn_Bots.THUMB_WATERMARK_ENABLED = True
-    if thumb_watermark:
         thumb_watermark.settings["enabled"] = True
     
     await message.reply(
-        f"✅ **Thumbnail Watermark Enabled for this Channel!**\n\n"
-        f"Now watermarks will be applied to all video thumbnails in this channel.\n\n"
-        f"Post a video to see the watermark in action! 🎉"
+        f"✅ **Watermark Set Successfully!**\n\n"
+        f"**Text:** `{watermark_text}`\n\n"
+        f"📍 Position: **Center**\n"
+        f"🎨 Color: **White**\n\n"
+        f"Now all video thumbnails will have this watermark."
     )
 
-@Client.on_message(filters.command("thumbwmdisable") & (filters.channel | filters.private))
-async def thumb_wm_disable(bot, message):
-    """Disable thumbnail watermark - CHANNEL ONLY"""
+@Client.on_message(filters.command("removewatermark") & (filters.channel | filters.private))
+async def remove_watermark(bot, message):
+    """Remove watermark - CHANNEL ONLY"""
     
     if message.chat.type == enums.ChatType.PRIVATE:
         return await message.reply(
             f"❌ **Please use this command in your channel!**\n\n"
-            f"Go to your channel and send: `/thumbwmdisable`"
+            f"Go to your channel and send: `/removewatermark`"
         )
     
     try:
@@ -770,70 +721,40 @@ async def thumb_wm_disable(bot, message):
         pass
     
     if not THUMB_WATERMARK_AVAILABLE:
-        return await message.reply("❌ Thumbnail Watermark module not available!")
-    
-    channel_id = await auto_set_channel(bot, message)
-    if channel_id is None:
-        return
-    
-    # Disable watermark for this channel
-    success = await update_channel_watermark_status(channel_id, False)
-    
-    if not success:
-        return await message.reply("❌ Failed to disable watermark! Please try again.")
-    
-    await message.reply(
-        f"❌ **Thumbnail Watermark Disabled for this Channel!**\n\n"
-        f"No watermarks will be applied to video thumbnails in this channel."
-    )
-
-@Client.on_message(filters.command("thumbwmstatus") & (filters.channel | filters.private))
-async def thumb_wm_status(bot, message):
-    """Check watermark status - CHANNEL ONLY"""
-    
-    if message.chat.type == enums.ChatType.PRIVATE:
-        return await message.reply(
-            f"❌ **Please use this command in your channel!**\n\n"
-            f"Go to your channel and send: `/thumbwmstatus`"
-        )
-    
-    try:
-        await message.delete()
-    except:
-        pass
-    
-    if not THUMB_WATERMARK_AVAILABLE:
-        return await message.reply("❌ Thumbnail Watermark module not available!")
+        return await message.reply("❌ Watermark module not available!")
     
     channel_id = message.chat.id
     
-    # Get channel data
-    chkData = await getChannelData(channel_id)
-    if not chkData:
+    # Check bot is admin
+    is_admin = await check_bot_admin(bot, channel_id)
+    if not is_admin:
         return await message.reply(
-            f"❌ **No setup found for this channel!**\n\n"
-            f"Send `/set_caption` first to set up this channel."
+            f"❌ **I'm not admin in this channel!**\n\n"
+            f"Please add me as admin first."
         )
     
-    # Get watermark status from database
-    wm_data = await get_channel_watermark(channel_id)
+    # Check if watermark exists
+    current_text = await get_channel_watermark(channel_id)
+    if not current_text:
+        return await message.reply(
+            f"❌ **No watermark found!**\n\n"
+            f"Use `/setwatermark Text` to add one."
+        )
     
-    if wm_data:
-        status = "✅ Enabled" if wm_data.get("enabled", False) else "❌ Disabled"
-        text = wm_data.get("text", "Not Set")
-    else:
-        status = "❌ Not Configured"
-        text = Rkn_Bots.THUMB_WATERMARK_TEXT if hasattr(Rkn_Bots, 'THUMB_WATERMARK_TEXT') else "📢 @WOLVERIN_P"
+    # Remove watermark
+    success = await remove_channel_watermark(channel_id)
+    
+    if not success:
+        return await message.reply("❌ Failed to remove watermark!")
+    
+    # Update global instance
+    if THUMB_WATERMARK_AVAILABLE and thumb_watermark:
+        thumb_watermark.settings["text"] = ""
+        thumb_watermark.settings["enabled"] = False
     
     await message.reply(
-        f"**🖼️ Thumbnail Watermark Status**\n\n"
-        f"📌 **Channel:** `{channel_id}`\n"
-        f"🎯 **Status:** {status}\n"
-        f"📝 **Text:** `{text}`\n\n"
-        f"**Commands:**\n"
-        f"• `/setthumbwm Text` - Set watermark text\n"
-        f"• `/thumbwmenable` - Enable watermark\n"
-        f"• `/thumbwmdisable` - Disable watermark"
+        f"✅ **Watermark Removed Successfully!**\n\n"
+        f"No more watermarks will be added to video thumbnails."
     )
 
 # ==================== STATUS COMMAND ====================
@@ -871,11 +792,11 @@ async def status_cmd(bot, message):
     btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
     
     # Get watermark status
-    wm_data = await get_channel_watermark(chnl_id)
-    if wm_data:
-        wm_status = f"\n\n🖼️ **Thumbnail Watermark:** {'✅ Enabled' if wm_data.get('enabled', False) else '❌ Disabled'}\n📝 **Watermark Text:** `{wm_data.get('text', 'Not Set')}`"
+    wm_text = await get_channel_watermark(chnl_id)
+    if wm_text:
+        wm_status = f"\n\n🖼️ **Watermark:** ✅ Enabled\n📝 **Text:** `{wm_text}`\n📍 **Position:** Center\n🎨 **Color:** White"
     else:
-        wm_status = "\n\n🖼️ **Thumbnail Watermark:** ❌ Not Configured\n📝 **Use `/setthumbwm` in your channel to set it up!**"
+        wm_status = "\n\n🖼️ **Watermark:** ❌ Not Set\n📝 Use `/setwatermark` in your channel to add one!"
     
     await message.reply_text(
         f"**📊 Your Settings**\n\n"
@@ -912,13 +833,11 @@ async def help_cmd(bot, message):
 ❌ `/delcaption` - Delete caption
 🗑️ `/remove_buttons` - Remove buttons
 
-**🎨 Thumbnail Watermark (Send in your channel):**
-🖼️ `/setthumbwm Text` - Set watermark text
-✅ `/thumbwmenable` - Enable watermark
-❌ `/thumbwmdisable` - Disable watermark
-📊 `/thumbwmstatus` - Check status
+**🖼️ Watermark Commands (Send in your channel):**
+✅ `/setwatermark Text` - Set watermark (Center, White)
+❌ `/removewatermark` - Remove watermark
 
-**📋 Commands (Private - All Users):**
+**📋 Commands (Private):**
 📊 `/status` - Check settings
 📢 `/help` - Show this help
 
@@ -937,7 +856,7 @@ async def help_cmd(bot, message):
     
     await message.reply_text(help_text, reply_markup=buttons)
 
-# ==================== AUTO EDIT CAPTION + THUMBNAIL WATERMARK ====================
+# ==================== AUTO EDIT CAPTION + WATERMARK ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
@@ -996,28 +915,21 @@ async def auto_edit_caption(bot, message):
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
                     
-                    # ============ THUMBNAIL WATERMARK FOR VIDEOS ============
+                    # ============ WATERMARK FOR VIDEOS ============
                     if file_type == "video" and THUMB_WATERMARK_AVAILABLE:
                         try:
-                            # Get channel-specific watermark settings
-                            wm_data = await get_channel_watermark(chnl_id)
+                            # Get channel-specific watermark
+                            watermark_text = await get_channel_watermark(chnl_id)
                             
-                            if wm_data and wm_data.get("enabled", False):
-                                watermark_text = wm_data.get("text", Rkn_Bots.THUMB_WATERMARK_TEXT if hasattr(Rkn_Bots, 'THUMB_WATERMARK_TEXT') else "📢 @WOLVERIN_P")
-                                
-                                # Update watermark instance with channel-specific text
-                                if hasattr(bot, 'thumb_watermark') and bot.thumb_watermark:
-                                    bot.thumb_watermark.settings["text"] = watermark_text
-                                    bot.thumb_watermark.settings["enabled"] = True
-                                    
-                                    print(f"🖼️ Processing thumbnail watermark for channel {chnl_id}: {watermark_text}")
-                                    watermarked_thumb = await bot.thumb_watermark.process_thumbnail(message)
-                                    if watermarked_thumb and os.path.exists(watermarked_thumb):
-                                        print(f"✅ Thumbnail watermarked: {watermarked_thumb}")
-                                        try:
-                                            os.remove(watermarked_thumb)
-                                        except:
-                                            pass
+                            if watermark_text and hasattr(bot, 'thumb_watermark') and bot.thumb_watermark:
+                                print(f"🖼️ Adding watermark for channel {chnl_id}: {watermark_text}")
+                                watermarked_thumb = await bot.thumb_watermark.process_thumbnail(message, watermark_text)
+                                if watermarked_thumb and os.path.exists(watermarked_thumb):
+                                    print(f"✅ Thumbnail watermarked: {watermarked_thumb}")
+                                    try:
+                                        os.remove(watermarked_thumb)
+                                    except:
+                                        pass
                         except Exception as e:
                             print(f"❌ Thumbnail watermark error: {e}")
                     
