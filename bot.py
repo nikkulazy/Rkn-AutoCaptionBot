@@ -1,6 +1,5 @@
+# bot.py - Complete with Thumbnail Watermark Support
 # (c) @RknDeveloperr
-# Rkn Developer 
-# Don't Remove Credit 😔
 
 from aiohttp import web
 from pyrogram import Client
@@ -11,7 +10,7 @@ import signal
 import sys
 import os
 
-# ✅ Logger ko import karo
+# Logger import
 try:
     from Rkn_Bots.logger import Logger
 except ImportError:
@@ -50,7 +49,7 @@ except ImportError:
         async def forward_file_to_log(self, *args, **kwargs):
             pass
 
-# ✅ Thumbnail Watermark import
+# Thumbnail Watermark import
 try:
     from Rkn_Bots.thumbnail_watermark import init_thumb_watermark
     THUMB_WATERMARK_AVAILABLE = True
@@ -82,10 +81,10 @@ class Rkn_AutoCaptionBot(Client):
         self.uptime = Rkn_Botz.BOT_UPTIME
         self.force_channel = Rkn_Bots.FORCE_SUB
         
-        # 🟢 Initialize Logger
+        # Initialize Logger
         self.logger = Logger(self)
         
-        # 🟢 Initialize Thumbnail Watermark
+        # Initialize Thumbnail Watermark
         if THUMB_WATERMARK_AVAILABLE:
             try:
                 self.thumb_watermark = await init_thumb_watermark(self)
@@ -95,7 +94,7 @@ class Rkn_AutoCaptionBot(Client):
         else:
             print("ℹ️ Thumbnail Watermark is not available")
         
-        # 🟢 Send Bot Started Log to Channel
+        # Send Bot Started Log
         try:
             await self.logger.bot_started()
         except Exception as e:
@@ -108,21 +107,19 @@ class Rkn_AutoCaptionBot(Client):
                 self.invitelink = link
             except Exception as e:
                 print(e)
-                print("Make Sure Bot admin in force sub channel")
                 self.force_channel = None
         
-        # Web Server Setup with error handling
+        # Web Server Setup
         try:
             self.web_app = web.AppRunner(await web_server())
             await self.web_app.setup()
-            bind_address = "0.0.0.0"
-            site = web.TCPSite(self.web_app, bind_address, Rkn_Bots.PORT)
+            site = web.TCPSite(self.web_app, "0.0.0.0", Rkn_Bots.PORT)
             await site.start()
             print(f"✅ Web server started on port {Rkn_Bots.PORT}")
         except Exception as e:
             print(f"⚠️ Web server error: {e}")
         
-        # Setup signal handlers for graceful shutdown
+        # Signal handlers
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
                 signal.signal(sig, lambda s, f: asyncio.create_task(self.shutdown()))
@@ -150,10 +147,11 @@ class Rkn_AutoCaptionBot(Client):
                     f"**🚀 {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️**\n\n"
                     f"✅ Bot is now LIVE!\n"
                     f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}{wm_status}\n\n"
-                    f"📌 **Thumbnail Watermark Commands:**\n"
-                    f"• `/setthumbwm` - Set watermark text\n"
-                    f"• `/thumbwmsettings` - Open settings\n"
-                    f"• `/thumbwmpreview` - Preview watermark"
+                    f"📌 **Thumbnail Watermark Commands (Send in Channel):**\n"
+                    f"• `/setthumbwm Text` - Set watermark text\n"
+                    f"• `/thumbwmenable` - Enable watermark\n"
+                    f"• `/thumbwmdisable` - Disable watermark\n"
+                    f"• `/thumbwmstatus` - Check status"
                 )
             except Exception as e:
                 print(f"⚠️ Could not notify admin {admin_id}: {e}")
@@ -165,14 +163,12 @@ class Rkn_AutoCaptionBot(Client):
         self.is_running = False
         print("🔄 Shutting down gracefully...")
         
-        # 🟢 Send Bot Stopped Log
         if hasattr(self, 'logger'):
             try:
                 await self.logger.bot_stopped()
             except Exception as e:
                 print(f"⚠️ Bot stop log error: {e}")
         
-        # Stop web server
         if self.web_app:
             try:
                 await self.web_app.cleanup()
