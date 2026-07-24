@@ -1,4 +1,4 @@
-# thumbnail_watermark.py - Simple Thumbnail Watermark System
+# thumbnail_watermark.py - Fixed Watermark Apply
 # (c) @RknDeveloperr
 
 import os
@@ -40,16 +40,21 @@ class ThumbnailWatermark:
             if not text:
                 return image_path
             
+            print(f"🖼️ Adding watermark to: {image_path}")
+            print(f"📝 Text: {text}")
+            
             # Open image
             img = Image.open(image_path).convert("RGBA")
+            print(f"📐 Image size: {img.size}")
             
             # Create watermark layer
             watermark = Image.new("RGBA", img.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(watermark)
             
             # Calculate font size (auto-adjust based on image size)
-            font_size = int(min(img.size) / 8)
-            font_size = max(20, min(font_size, 60))
+            font_size = int(min(img.size) / 6)
+            font_size = max(30, min(font_size, 80))
+            print(f"🔤 Font size: {font_size}")
             
             try:
                 font = ImageFont.truetype("arial.ttf", font_size)
@@ -58,27 +63,40 @@ class ThumbnailWatermark:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
                 except:
                     font = ImageFont.load_default()
+                    print("⚠️ Using default font")
             
             # Get text dimensions
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
+            print(f"📏 Text size: {text_width}x{text_height}")
             
             # Always Center
             x = (img.width - text_width) // 2
             y = (img.height - text_height) // 2
+            print(f"📍 Position: ({x}, {y})")
+            
+            # Background box for better visibility
+            box_padding = 20
+            draw.rectangle(
+                [x - box_padding, y - box_padding, 
+                 x + text_width + box_padding, y + text_height + box_padding],
+                fill=(0, 0, 0, 150)
+            )
+            print("📦 Added background box")
             
             # Shadow for better visibility
-            shadow_offset = 2
+            shadow_offset = 3
             draw.text(
                 (x + shadow_offset, y + shadow_offset),
                 text,
                 font=font,
-                fill=(0, 0, 0, 128)
+                fill=(0, 0, 0, 200)
             )
             
             # Always White
             draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
+            print("✅ Watermark drawn successfully")
             
             # Composite
             combined = Image.alpha_composite(img, watermark)
@@ -86,15 +104,18 @@ class ThumbnailWatermark:
             # Save
             output_path = image_path.replace(".jpg", "_watermarked.jpg")
             combined.convert("RGB").save(output_path, quality=95)
+            print(f"💾 Saved: {output_path}")
             
             return output_path
             
         except Exception as e:
             print(f"❌ Watermark error: {e}")
+            import traceback
+            traceback.print_exc()
             return image_path
     
     async def process_thumbnail(self, message, text):
-        """Process thumbnail with watermark"""
+        """Process thumbnail with watermark and REPLACE original"""
         try:
             if not text:
                 return None
@@ -102,21 +123,36 @@ class ThumbnailWatermark:
             # Download thumbnail
             thumb_path = await self.download_thumbnail(message)
             if not thumb_path:
+                print("❌ No thumbnail downloaded")
                 return None
+            
+            print(f"📥 Downloaded: {thumb_path}")
             
             # Add watermark
             watermarked_path = await self.add_watermark(thumb_path, text)
             
-            # Clean up original
-            try:
-                os.remove(thumb_path)
-            except:
-                pass
+            if watermarked_path and os.path.exists(watermarked_path):
+                print(f"✅ Watermarked: {watermarked_path}")
+                
+                # 🔥 IMPORTANT: Delete original and rename watermarked
+                try:
+                    os.remove(thumb_path)
+                    print(f"🗑️ Deleted original: {thumb_path}")
+                except:
+                    pass
+                
+                # Rename watermarked to original name
+                os.rename(watermarked_path, thumb_path)
+                print(f"📝 Renamed watermarked to: {thumb_path}")
+                
+                return thumb_path
             
-            return watermarked_path
+            return None
             
         except Exception as e:
             print(f"❌ Process thumbnail error: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
 # ==================== GLOBAL INSTANCE ====================
