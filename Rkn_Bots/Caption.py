@@ -929,15 +929,18 @@ async def auto_edit_caption(bot, message):
                                 if watermarked_thumb and os.path.exists(watermarked_thumb):
                                     print(f"✅ Thumbnail watermarked: {watermarked_thumb}")
                                     
-                                    # 🔥 IMPORTANT: Upload watermarked thumbnail as document
-                                    try:
+                                    # 🔥 IMPORTANT: Replace video thumbnail
+                                    success = await bot.thumb_watermark.replace_thumbnail(message, watermarked_thumb)
+                                    
+                                    if success:
+                                        print("✅ Video thumbnail replaced with watermarked version!")
+                                    else:
+                                        print("⚠️ Could not replace thumbnail, sending as document")
+                                        # Fallback: send as document
                                         await message.reply_document(
                                             document=watermarked_thumb,
                                             caption="🖼️ Watermarked Thumbnail"
                                         )
-                                        print("✅ Watermarked thumbnail uploaded!")
-                                    except Exception as e:
-                                        print(f"⚠️ Could not upload watermarked thumbnail: {e}")
                                     
                                     # Cleanup
                                     try:
