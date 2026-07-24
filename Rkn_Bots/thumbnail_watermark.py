@@ -19,12 +19,12 @@ class ThumbnailWatermark:
         self.font_size_max = 60
         
         # 🎯 Position Offset (Center se thoda neeche)
-        self.position_offset_y = 30    # 30px neeche (increase for more down)
+        self.position_offset_y = 10    # 30px neeche (increase for more down)
         
         # 🎨 Background Settings
         self.bg_enabled = True         # Background on/off
-        self.bg_opacity = 80           # 🔥 80 = Light (was 150, 0=transparent, 255=dark)
-        self.bg_padding = 20           # Background box padding
+        self.bg_opacity = 50           # 🔥 80 = Light (was 150, 0=transparent, 255=dark)
+        self.bg_padding = 10           # Background box padding
         
         # ✨ Text Settings
         self.text_opacity = 255        # 🔥 255 = Fully Bright White (was 255, same but ensure)
