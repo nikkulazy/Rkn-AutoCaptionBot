@@ -53,8 +53,8 @@ class ThumbnailWatermark:
             draw = ImageDraw.Draw(watermark)
             
             # Calculate font size
-            font_size = int(min(img.size) / 6)
-            font_size = max(10, min(font_size, 80))
+            font_size = int(min(img.size) / 12)
+            font_size = max(10, min(font_size, 40))
             print(f"🔤 Font size: {font_size}")
             
             try:
