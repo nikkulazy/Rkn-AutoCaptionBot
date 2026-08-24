@@ -7,7 +7,6 @@ from pyrogram import Client
 from config import Rkn_Bots, Rkn_Bots as Rkn_Botz
 from Rkn_Bots.web_support import web_server
 
-# ✅ Logger ko import karo
 try:
     from Rkn_Bots.logger import Logger
 except ImportError:
@@ -23,8 +22,6 @@ except ImportError:
             pass
         async def channel_setup(self, *args, **kwargs):
             pass
-        async def channel_removed(self, *args, **kwargs):
-            pass
         async def caption_set(self, *args, **kwargs):
             pass
         async def caption_deleted(self, *args, **kwargs):
@@ -33,8 +30,6 @@ except ImportError:
             pass
         async def buttons_removed(self, *args, **kwargs):
             pass
-        async def caption_edited(self, *args, **kwargs):
-            pass
         async def broadcast_started(self, *args, **kwargs):
             pass
         async def broadcast_completed(self, *args, **kwargs):
@@ -42,6 +37,8 @@ except ImportError:
         async def admin_action(self, *args, **kwargs):
             pass
         async def system_error(self, *args, **kwargs):
+            pass
+        async def forward_file_to_log(self, *args, **kwargs):
             pass
 
 class Rkn_AutoCaptionBot(Client):
@@ -62,16 +59,13 @@ class Rkn_AutoCaptionBot(Client):
         self.uptime = Rkn_Botz.BOT_UPTIME
         self.force_channel = Rkn_Bots.FORCE_SUB
         
-        # 🟢 Initialize Logger
         self.logger = Logger(self)
         
-        # 🟢 Send Bot Started Log to Channel
         try:
             await self.logger.bot_started()
         except Exception as e:
             print(f"⚠️ Bot start log error: {e}")
         
-        # Force Sub Channel Setup
         if Rkn_Bots.FORCE_SUB:
             try:
                 link = await self.export_chat_invite_link(Rkn_Bots.FORCE_SUB)
@@ -81,19 +75,16 @@ class Rkn_AutoCaptionBot(Client):
                 print("Make Sure Bot admin in force sub channel")
                 self.force_channel = None
         
-        # Web Server Setup
         app = web.AppRunner(await web_server())
         await app.setup()
         bind_address = "0.0.0.0"
         await web.TCPSite(app, bind_address, Rkn_Bots.PORT).start()
         
-        # Console Output
         print(f"\n{'='*50}")
         print(f"✅ {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️")
         print(f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}")
         print(f"{'='*50}\n")
         
-        # Notify Admins
         for admin_id in Rkn_Bots.ADMIN:
             try:
                 await self.send_message(
@@ -106,7 +97,6 @@ class Rkn_AutoCaptionBot(Client):
                 pass
         
     async def stop(self, *args):
-        # 🟢 Send Bot Stopped Log
         if hasattr(self, 'logger'):
             try:
                 await self.logger.bot_stopped()
