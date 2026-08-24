@@ -4,7 +4,7 @@ from config import Rkn_Bots
 client = motor.motor_asyncio.AsyncIOMotorClient(Rkn_Bots.DB_URL)
 db = client[Rkn_Bots.DB_NAME]
 chnl_ids = db.chnl_ids
-users = db.users
+users = db.users  # ✅ Make sure users collection exists
 
 async def insert(user_id):
     user_det = {"_id": user_id}
@@ -65,7 +65,7 @@ async def updateCap(chnl_id, caption, buttons=None):
     update_data = {"caption": caption}
     if buttons is not None:
         update_data["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
-    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": update_data}, upsert=True)
+    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": update_data})
 
 async def updateButtons(chnl_id, buttons):
     buttons_dict = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]

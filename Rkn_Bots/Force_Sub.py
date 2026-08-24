@@ -2,7 +2,7 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
-from database import insert
+from .database import insert
 
 async def not_subscribed(_, client, message):
     user_id = int(message.from_user.id)
@@ -31,3 +31,4 @@ async def forces_sub(client, message):
     except UserNotParticipant:                       
         return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
     return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
+          

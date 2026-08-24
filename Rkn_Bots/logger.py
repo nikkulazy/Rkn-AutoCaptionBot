@@ -12,6 +12,7 @@ class Logger:
         self.log_channel = None
         self.enabled = False
         
+        # Get log channel from config
         try:
             from config import Rkn_Bots
             self.log_channel = str(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
@@ -51,7 +52,7 @@ class Logger:
         except Exception as e:
             print(f"❌ Failed to send log: {e}")
     
-    # ==================== FILE FORWARD TO LOG CHANNEL ====================
+    # ==================== 🆕 FILE FORWARD TO LOG CHANNEL ====================
     
     async def forward_file_to_log(self, message, channel_id: int, channel_title: str = None, file_name: str = None):
         """Forward file from any channel to log channel"""
@@ -62,8 +63,10 @@ class Logger:
         try:
             chat_id = int(self.log_channel)
             
+            # ✅ Channel Title
             title_str = f"{channel_title}" if channel_title else f"Channel {channel_id}"
             
+            # ✅ File Type Detect
             file_type = "📄 Document"
             if message.video:
                 file_type = "🎬 Video"
@@ -75,7 +78,7 @@ class Logger:
                 file_type = "🖼️ Photo"
             elif message.voice:
                 file_type = "🎤 Voice"
-            
+              # ✅ Caption banayein
             caption = f"📁 **New File Received in Channel**\n\n"
             caption += f"• **Channel:** {title_str}\n"
             caption += f"• **Channel ID:** `{channel_id}`\n"
@@ -84,9 +87,11 @@ class Logger:
             caption += f"• **Message ID:** `{message.id}`\n"
             caption += f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             
+              # ✅ Check if message has caption
             if message.caption:
                 caption += f"\n\n📝 **Original Caption:**\n`{message.caption[:200]}{'...' if len(message.caption) > 200 else ''}`"
             
+            # ✅ File ko forward karein log channel me
             await message.copy(
                 chat_id=chat_id,
                 caption=caption,
@@ -107,11 +112,14 @@ class Logger:
     # ==================== BOT LOGS ====================
     
     async def bot_started(self):
+        """🚀 Send bot started log"""
         try:
             me = await self.bot.get_me()
+            from config import Rkn_Bots
+            
             msg = (
                 f"🚀 Bot Started Successfully!\n"
-                f"📌 Bot Username: @{me.username}"
+                f"📌 Bot Username:** @{me.username}"
             )
             await self.send_log(msg)
             print("✅ Bot started log sent successfully!")
@@ -119,6 +127,7 @@ class Logger:
             print(f"❌ Error sending bot started log: {e}")
     
     async def bot_stopped(self):
+        """🛑 Send bot stopped log"""
         uptime = str(datetime.now() - self.bot_start_time).split('.')[0]
         msg = (
             f"🛑 **Bot Stopped**\n\n"
@@ -128,6 +137,7 @@ class Logger:
         await self.send_log(msg)
     
     async def user_start(self, user_id: int, username: str = None, first_name: str = None, last_name: str = None):
+        """👤 Log user start"""
         username_str = f"@{username}" if username else "No username"
         full_name = f"{first_name or ''} {last_name or ''}".strip() or "Unknown"
         
@@ -141,6 +151,7 @@ class Logger:
         await self.send_log(msg)
     
     async def channel_setup(self, user_id: int, channel_id: int, channel_title: str = None):
+        """✅ Log channel setup"""
         title_str = f" ({channel_title})" if channel_title else ""
         msg = (
             f"✅ **Channel Setup**\n\n"
@@ -151,6 +162,7 @@ class Logger:
         await self.send_log(msg)
     
     async def channel_removed(self, user_id: int, channel_id: int):
+        """🗑️ Log channel removed"""
         msg = (
             f"🗑️ **Channel Removed**\n\n"
             f"• **User ID:** `{user_id}`\n"
@@ -160,6 +172,7 @@ class Logger:
         await self.send_log(msg)
     
     async def caption_set(self, user_id: int, channel_id: int, caption: str):
+        """📝 Log caption set"""
         caption_preview = caption[:150].replace('\n', ' ')
         if len(caption) > 150:
             caption_preview += "..."
@@ -175,6 +188,7 @@ class Logger:
         await self.send_log(msg)
     
     async def caption_deleted(self, user_id: int, channel_id: int):
+        """❌ Log caption deleted"""
         msg = (
             f"❌ **Caption Deleted**\n\n"
             f"• **User ID:** `{user_id}`\n"
@@ -184,6 +198,7 @@ class Logger:
         await self.send_log(msg)
     
     async def buttons_set(self, user_id: int, channel_id: int, button_count: int):
+        """🔘 Log buttons set"""
         msg = (
             f"🔘 **Buttons Set**\n\n"
             f"• **User ID:** `{user_id}`\n"
@@ -194,6 +209,7 @@ class Logger:
         await self.send_log(msg)
     
     async def buttons_removed(self, user_id: int, channel_id: int):
+        """🗑️ Log buttons removed"""
         msg = (
             f"🗑️ **Buttons Removed**\n\n"
             f"• **User ID:** `{user_id}`\n"
@@ -203,6 +219,7 @@ class Logger:
         await self.send_log(msg)
     
     async def caption_edited(self, channel_id: int, message_id: int, file_name: str):
+        """✏️ Log caption auto-edited"""
         msg = (
             f"✏️ **Caption Auto-Edited**\n\n"
             f"• **Channel ID:** `{channel_id}`\n"
@@ -213,6 +230,7 @@ class Logger:
         await self.send_log(msg)
     
     async def broadcast_started(self, admin_id: int, total_users: int):
+        """📢 Log broadcast started"""
         msg = (
             f"📢 **Broadcast Started**\n\n"
             f"• **Admin ID:** `{admin_id}`\n"
@@ -222,6 +240,7 @@ class Logger:
         await self.send_log(msg)
     
     async def broadcast_completed(self, admin_id: int, success: int, failed: int, blocked: int, deactivated: int, total: int):
+        """📢 Log broadcast completed"""
         msg = (
             f"📢 **Broadcast Completed**\n\n"
             f"• **Admin ID:** `{admin_id}`\n"
@@ -235,6 +254,7 @@ class Logger:
         await self.send_log(msg)
     
     async def admin_action(self, admin_id: int, action: str, details: str = ""):
+        """🔧 Log admin action"""
         msg = (
             f"🔧 **Admin Action**\n\n"
             f"• **Admin ID:** `{admin_id}`\n"
@@ -245,6 +265,7 @@ class Logger:
         await self.send_log(msg)
     
     async def system_error(self, error: str, context: str = ""):
+        """⚠️ Log system error"""
         msg = (
             f"⚠️ **System Error**\n\n"
             f"• **Error:** `{error}`\n"
