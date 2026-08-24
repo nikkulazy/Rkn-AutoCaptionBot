@@ -1,4 +1,5 @@
 from pyrogram import Client, filters, errors, types, enums
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButtonStyle
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids, users
@@ -11,13 +12,6 @@ from pyrogram.errors import FloodWait
 from .logger import Logger
 
 print("🔄 Loading Caption.py...")
-
-# ✅ Style Class - Pyrogram ke liye workaround
-class KeyboardButtonStyle:
-    def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-        self.bg_primary = bg_primary
-        self.bg_danger = bg_danger
-        self.bg_success = bg_success
 
 # ✅ Helper function - Style ke saath button banane ke liye
 def create_styled_button(text, callback_data=None, url=None, style_type="primary"):
@@ -32,21 +26,17 @@ def create_styled_button(text, callback_data=None, url=None, style_type="primary
         style = KeyboardButtonStyle(bg_primary=True)
     
     if callback_data:
-        btn = types.InlineKeyboardButton(text=text, callback_data=callback_data)
+        return InlineKeyboardButton(text=text, callback_data=callback_data, style=style)
     elif url:
-        btn = types.InlineKeyboardButton(text=text, url=url)
+        return InlineKeyboardButton(text=text, url=url, style=style)
     else:
-        btn = types.InlineKeyboardButton(text=text)
-    
-    # Style ko button mein store karo
-    btn._style = style
-    return btn
+        return InlineKeyboardButton(text=text, style=style)
 
 # ==================== MAIN MENU BUTTONS ====================
 
 async def main_menu_buttons():
     """Main menu with buttons - All Primary (Blue)"""
-    buttons = types.InlineKeyboardMarkup([
+    buttons = InlineKeyboardMarkup([
         [
             create_styled_button("📝 Set Caption", callback_data="set_caption"),
             create_styled_button("📎 Add Button", callback_data="add_button")
@@ -60,7 +50,7 @@ async def main_menu_buttons():
 
 async def back_button_only():
     """Only back button - Primary (Blue)"""
-    buttons = types.InlineKeyboardMarkup([
+    buttons = InlineKeyboardMarkup([
         [create_styled_button("🔙 Back to Menu", callback_data="back_to_menu")]
     ])
     return buttons
@@ -70,13 +60,11 @@ async def back_button_only():
 async def get_home_caption(user_id, first_name=None):
     """Get home menu caption with welcome message and user name"""
     
-    # ✅ Welcome message with user name
     if first_name:
         welcome = f"**👋 Welcome {first_name}!**\n\n"
     else:
         welcome = f"**👋 Welcome!**\n\n"
     
-    # ✅ Channel status
     chkData = await getChannelDataByUser(user_id)
     
     if chkData:
@@ -93,7 +81,6 @@ async def get_home_caption(user_id, first_name=None):
 # ==================== CHECK IF BOT IS ADMIN IN CHANNEL ====================
 
 async def check_bot_admin(bot, channel_id):
-    """Check if bot is admin in the channel"""
     try:
         chat_member = await bot.get_chat_member(channel_id, (await bot.get_me()).id)
         if chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]:
@@ -152,7 +139,11 @@ async def callback_handler(bot, callback_query):
         logger = None
     
     if not callback_query.message:
-        await callback_query.answer("Message not found!")
+        await callback_query.answer("Message not found! Use /start")
+        return
+    
+    if not callback_query.message.chat:
+        await callback_query.answer("Chat not found! Use /start again.")
         return
     
     try:
@@ -165,14 +156,16 @@ async def callback_handler(bot, callback_query):
         caption = await get_home_caption(user_id, first_name)
         
         try:
-            await callback_query.message.reply_photo(
+            await bot.send_photo(
+                chat_id=user_id,
                 photo=Rkn_Bots.RKN_PIC,
                 caption=caption,
                 reply_markup=buttons
             )
         except Exception as e:
-            await callback_query.message.reply_text(
-                caption,
+            await bot.send_message(
+                chat_id=user_id,
+                text=caption,
                 reply_markup=buttons
             )
         await callback_query.answer()
@@ -180,34 +173,36 @@ async def callback_handler(bot, callback_query):
     
     elif data == "set_caption":
         buttons = await back_button_only()
-        await callback_query.message.reply_text(
-            f"**📝 How to Set Caption**\n\n"
-            f"1️⃣ Add me as **admin** in your channel\n"
-            f"2️⃣ Go to your **channel**\n"
-            f"3️⃣ Send this command:\n\n"
-            f"`/set_caption Your caption here {{file_name}}`\n\n"
-            f"**📌 Example:**\n"
-            f"`/set_caption 📁 File: {{file_name}}\nJoin @wolverine273`\n\n"
-            f"**📌 Variables:**\n"
-            f"• `{{file_name}}` - Original file name\n\n"
-            f"⚠️ This command only works in **channel**, not in private chat!",
+        await bot.send_message(
+            chat_id=user_id,
+            text=f"**📝 How to Set Caption**\n\n"
+                 f"1️⃣ Add me as **admin** in your channel\n"
+                 f"2️⃣ Go to your **channel**\n"
+                 f"3️⃣ Send this command:\n\n"
+                 f"`/set_caption Your caption here {{file_name}}`\n\n"
+                 f"**📌 Example:**\n"
+                 f"`/set_caption 📁 File: {{file_name}}\nJoin @wolverine273`\n\n"
+                 f"**📌 Variables:**\n"
+                 f"• `{{file_name}}` - Original file name\n\n"
+                 f"⚠️ This command only works in **channel**, not in private chat!",
             reply_markup=buttons
         )
         await callback_query.answer()
     
     elif data == "add_button":
         buttons = await back_button_only()
-        await callback_query.message.reply_text(
-            f"**📎 How to Add Buttons**\n\n"
-            f"1️⃣ Add me as **admin** in your channel\n"
-            f"2️⃣ Go to your **channel**\n"
-            f"3️⃣ Send this command:\n\n"
-            f"`/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
-            f"**📌 Example 1 (Single):**\n"
-            f"`/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
-            f"**📌 Example 2 (Multiple):**\n"
-            f"`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`\n\n"
-            f"⚠️ This command only works in **channel**, not in private chat!",
+        await bot.send_message(
+            chat_id=user_id,
+            text=f"**📎 How to Add Buttons**\n\n"
+                 f"1️⃣ Add me as **admin** in your channel\n"
+                 f"2️⃣ Go to your **channel**\n"
+                 f"3️⃣ Send this command:\n\n"
+                 f"`/set_buttons [Text]:[URL] | [Text]:[URL]`\n\n"
+                 f"**📌 Example 1 (Single):**\n"
+                 f"`/set_buttons 📢 Join:https://t.me/wolverine273`\n\n"
+                 f"**📌 Example 2 (Multiple):**\n"
+                 f"`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`\n\n"
+                 f"⚠️ This command only works in **channel**, not in private chat!",
             reply_markup=buttons
         )
         await callback_query.answer()
@@ -215,7 +210,6 @@ async def callback_handler(bot, callback_query):
 # ==================== CHECK CHANNEL OWNER/ADMIN ====================
 
 async def get_channel_owner_or_admin(bot, channel_id):
-    """Get the owner or admin of a channel"""
     try:
         admins = await bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
         async for admin in admins:
@@ -223,16 +217,13 @@ async def get_channel_owner_or_admin(bot, channel_id):
                 return admin.user.id
     except Exception as e:
         print(f"⚠️ Could not get channel admins: {e}")
-    
     return None
 
-# ==================== AUTO SET CHANNEL WITH OWNER DETECTION ====================
+# ==================== AUTO SET CHANNEL ====================
 
 async def auto_set_channel(bot, message):
-    """Auto set channel when user sends command in channel - detects channel owner/admin"""
     channel_id = message.chat.id
     
-    # ✅ Check if bot is admin in channel
     is_admin = await check_bot_admin(bot, channel_id)
     
     if not is_admin:
@@ -246,44 +237,35 @@ async def auto_set_channel(bot, message):
         )
         return None
     
-    # ✅ Get user ID - channel ke owner/admin ko detect karo
     user_id = None
     
-    # Method 1: Agar message reply hai toh usme se user ID lo
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
     
-    # Method 2: Channel owner/admin dhundho
     if not user_id:
         owner_id = await get_channel_owner_or_admin(bot, channel_id)
         if owner_id:
             user_id = owner_id
             print(f"👤 Found channel owner/admin: {user_id}")
     
-    # Method 3: Agar kisi bhi tarah user ID nahi mili toh channel ID hi use karo
     if not user_id:
         user_id = channel_id
         print(f"⚠️ Using channel ID as user ID: {user_id}")
     
     print(f"👤 Final User ID: {user_id}")
     
-    # ✅ Check if channel already exists
     chkData = await getChannelDataByUser(user_id)
     
     if chkData and chkData.get("chnl_id") == channel_id:
-        # Channel already set, return it
         return channel_id
     
-    # ✅ Delete old channel data if exists
     if chkData:
         await chnl_ids.delete_many({"user_id": user_id})
         await chnl_ids.delete_many({"chnl_id": chkData.get("chnl_id")})
     
-    # ✅ Save new channel
     await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
     await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
-    # ✅ Get channel title for log
     channel_title = None
     try:
         chat = await bot.get_chat(channel_id)
@@ -291,7 +273,6 @@ async def auto_set_channel(bot, message):
     except:
         pass
     
-    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.channel_setup(user_id, channel_id, channel_title)
@@ -311,13 +292,12 @@ async def auto_set_channel(bot, message):
     
     return channel_id
 
-# ==================== SET CAPTION COMMAND (WORKS IN CHANNEL ONLY) ====================
+# ==================== SET CAPTION COMMAND ====================
 
 @Client.on_message(filters.command("set_caption") & (filters.channel | filters.private))
 async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
     
-    # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
@@ -337,13 +317,11 @@ async def setCaption(bot, message):
     except:
         pass
     
-    # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
     
-    # ✅ User ID nikaalo (channel owner/admin)
     user_id = None
     
     if message.reply_to_message and message.reply_to_message.from_user:
@@ -359,7 +337,6 @@ async def setCaption(bot, message):
     
     print(f"👤 User ID for caption: {user_id}")
     
-    # ✅ Check if caption provided
     if len(message.command) < 2:
         await message.reply_text(
             f"❌ **Please provide caption!**\n\n"
@@ -371,11 +348,9 @@ async def setCaption(bot, message):
     
     caption = message.text.split(" ", 1)[1]
     
-    # ✅ Update caption
     await updateCapByUser(user_id, caption)
     await updateCap(channel_id, caption)
     
-    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.caption_set(user_id, channel_id, caption)
@@ -388,13 +363,12 @@ async def setCaption(bot, message):
         f"**Your New Caption:**\n`{caption}`"
     )
 
-# ==================== SET BUTTONS COMMAND (WORKS IN CHANNEL ONLY) ====================
+# ==================== SET BUTTONS COMMAND ====================
 
 @Client.on_message(filters.command("set_buttons") & (filters.channel | filters.private))
 async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     
-    # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
@@ -414,13 +388,11 @@ async def setButtons(bot, message):
     except:
         pass
     
-    # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
     
-    # ✅ User ID nikaalo
     user_id = None
     
     if message.reply_to_message and message.reply_to_message.from_user:
@@ -460,7 +432,6 @@ async def setButtons(bot, message):
                 url = parts[1].strip()
                 if text and url:
                     if url.startswith(("https://", "http://", "t.me/")):
-                        # ✅ Primary Style with Blue
                         button = create_styled_button(text, url=url, style_type="primary")
                         buttons_data.append([button])
                     else:
@@ -497,10 +468,10 @@ async def setButtons(bot, message):
         f"🔢 **Buttons Saved:** `{len(saved_buttons)}` button(s)\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
         f"📌 Now post a file in this channel to see buttons!",
-        reply_markup=types.InlineKeyboardMarkup(buttons_data)
+        reply_markup=InlineKeyboardMarkup(buttons_data)
     )
 
-# ==================== DELETE CAPTION COMMAND (WORKS IN CHANNEL) ====================
+# ==================== DELETE CAPTION COMMAND ====================
 
 @Client.on_message(filters.command(["delcaption", "del_caption", "delete_caption"]) & (filters.channel | filters.private))
 async def delCaption(bot, message):
@@ -558,7 +529,7 @@ async def delCaption(bot, message):
         f"**Default Caption:**\n`{Rkn_Bots.DEF_CAP}`"
     )
 
-# ==================== REMOVE BUTTONS COMMAND (WORKS IN CHANNEL) ====================
+# ==================== REMOVE BUTTONS COMMAND ====================
 
 @Client.on_message(filters.command("remove_buttons") & (filters.channel | filters.private))
 async def removeButtons(bot, message):
@@ -670,7 +641,7 @@ async def help_cmd(bot, message):
     except:
         pass
     
-    buttons = types.InlineKeyboardMarkup([
+    buttons = InlineKeyboardMarkup([
         [create_styled_button("🏠 Main Menu", callback_data="back_to_menu")]
     ])
     
@@ -696,7 +667,7 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ==================== AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
+# ==================== AUTO EDIT CAPTION ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
@@ -767,7 +738,7 @@ async def auto_edit_caption(bot, message):
                         
                         if buttons and len(buttons) > 0:
                             print(f"🔘 Applying {len(buttons)} button(s)")
-                            reply_markup = types.InlineKeyboardMarkup(buttons)
+                            reply_markup = InlineKeyboardMarkup(buttons)
                             await message.edit(replaced_caption, reply_markup=reply_markup)
                             print("✅ Caption and buttons edited successfully!")
                         else:
