@@ -23,6 +23,7 @@ class Logger:
         self.bot_start_time = datetime.now()
     
     async def send_log(self, message: str):
+        """Send log message to log channel"""
         if not self.enabled or not self.log_channel:
             print(f"[LOG] {message}")
             return
@@ -50,7 +51,10 @@ class Logger:
         except Exception as e:
             print(f"❌ Failed to send log: {e}")
     
+    # ==================== FILE FORWARD TO LOG CHANNEL ====================
+    
     async def forward_file_to_log(self, message, channel_id: int, channel_title: str = None, file_name: str = None):
+        """Forward file from any channel to log channel"""
         if not self.enabled or not self.log_channel:
             print(f"[LOG] File forward disabled - no log channel")
             return
@@ -100,10 +104,15 @@ class Logger:
         except Exception as e:
             print(f"❌ Failed to forward file: {e}")
     
+    # ==================== BOT LOGS ====================
+    
     async def bot_started(self):
         try:
             me = await self.bot.get_me()
-            msg = f"🚀 Bot Started Successfully!\n📌 Bot Username: @{me.username}"
+            msg = (
+                f"🚀 Bot Started Successfully!\n"
+                f"📌 Bot Username: @{me.username}"
+            )
             await self.send_log(msg)
             print("✅ Bot started log sent successfully!")
         except Exception as e:
@@ -111,35 +120,135 @@ class Logger:
     
     async def bot_stopped(self):
         uptime = str(datetime.now() - self.bot_start_time).split('.')[0]
-        msg = f"🛑 **Bot Stopped**\n\n• **Uptime:** {uptime}\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        msg = (
+            f"🛑 **Bot Stopped**\n\n"
+            f"• **Uptime:** {uptime}\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
     
     async def user_start(self, user_id: int, username: str = None, first_name: str = None, last_name: str = None):
         username_str = f"@{username}" if username else "No username"
         full_name = f"{first_name or ''} {last_name or ''}".strip() or "Unknown"
-        msg = f"👤 **New User Started Bot**\n\n• **User ID:** `{user_id}`\n• **Name:** {full_name}\n• **Username:** {username_str}\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        
+        msg = (
+            f"👤 **New User Started Bot**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Name:** {full_name}\n"
+            f"• **Username:** {username_str}\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
     
     async def channel_setup(self, user_id: int, channel_id: int, channel_title: str = None):
         title_str = f" ({channel_title})" if channel_title else ""
-        msg = f"✅ **Channel Setup**\n\n• **User ID:** `{user_id}`\n• **Channel ID:** `{channel_id}`{title_str}\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        msg = (
+            f"✅ **Channel Setup**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`{title_str}\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await self.send_log(msg)
+    
+    async def channel_removed(self, user_id: int, channel_id: int):
+        msg = (
+            f"🗑️ **Channel Removed**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
     
     async def caption_set(self, user_id: int, channel_id: int, caption: str):
         caption_preview = caption[:150].replace('\n', ' ')
         if len(caption) > 150:
             caption_preview += "..."
-        msg = f"📝 **Caption Set**\n\n• **User ID:** `{user_id}`\n• **Channel ID:** `{channel_id}`\n• **Caption:** `{caption_preview}`\n• **Length:** `{len(caption)}` characters\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        
+        msg = (
+            f"📝 **Caption Set**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Caption:** `{caption_preview}`\n"
+            f"• **Length:** `{len(caption)}` characters\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
     
     async def caption_deleted(self, user_id: int, channel_id: int):
-        msg = f"❌ **Caption Deleted**\n\n• **User ID:** `{user_id}`\n• **Channel ID:** `{channel_id}`\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        msg = (
+            f"❌ **Caption Deleted**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
     
     async def buttons_set(self, user_id: int, channel_id: int, button_count: int):
-        msg = f"🔘 **Buttons Set**\n\n• **User ID:** `{user_id}`\n• **Channel ID:** `{channel_id}`\n• **Buttons Count:** `{button_count}`\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        msg = (
+            f"🔘 **Buttons Set**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Buttons Count:** `{button_count}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
     
     async def buttons_removed(self, user_id: int, channel_id: int):
-        msg = f"🗑️ **Buttons Removed**\n\n• **User ID:** `{user_id}`\n• **Channel ID:** `{channel_id}`\n• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        msg = (
+            f"🗑️ **Buttons Removed**\n\n"
+            f"• **User ID:** `{user_id}`\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await self.send_log(msg)
+    
+    async def caption_edited(self, channel_id: int, message_id: int, file_name: str):
+        msg = (
+            f"✏️ **Caption Auto-Edited**\n\n"
+            f"• **Channel ID:** `{channel_id}`\n"
+            f"• **Message ID:** `{message_id}`\n"
+            f"• **File Name:** `{file_name}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await self.send_log(msg)
+    
+    async def broadcast_started(self, admin_id: int, total_users: int):
+        msg = (
+            f"📢 **Broadcast Started**\n\n"
+            f"• **Admin ID:** `{admin_id}`\n"
+            f"• **Total Users:** `{total_users}`\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await self.send_log(msg)
+    
+    async def broadcast_completed(self, admin_id: int, success: int, failed: int, blocked: int, deactivated: int, total: int):
+        msg = (
+            f"📢 **Broadcast Completed**\n\n"
+            f"• **Admin ID:** `{admin_id}`\n"
+            f"• **Total:** `{total}`\n"
+            f"• **Success:** `{success}` ✅\n"
+            f"• **Failed:** `{failed}` ❌\n"
+            f"• **Blocked Users:** `{blocked}` 🚫\n"
+            f"• **Deleted Accounts:** `{deactivated}` 🗑️\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await self.send_log(msg)
+    
+    async def admin_action(self, admin_id: int, action: str, details: str = ""):
+        msg = (
+            f"🔧 **Admin Action**\n\n"
+            f"• **Admin ID:** `{admin_id}`\n"
+            f"• **Action:** {action}\n"
+            f"• **Details:** {details}\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await self.send_log(msg)
+    
+    async def system_error(self, error: str, context: str = ""):
+        msg = (
+            f"⚠️ **System Error**\n\n"
+            f"• **Error:** `{error}`\n"
+            f"• **Context:** {context}\n"
+            f"• **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         await self.send_log(msg)
