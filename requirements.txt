@@ -1,4 +1,4 @@
-pyrogrammod
+pyrogram
 tgcrypto
 motor
 aiohttp
