@@ -56,7 +56,8 @@ class Rkn_AutoCaptionBot(Client):
             sleep_threshold=15,
         )
 
-    async def start(self):
+    # ✅ FIX: **kwargs add karo taaki extra arguments ignore ho jayein
+    async def start(self, **kwargs):
         await super().start()
         me = await self.get_me()
         self.uptime = Rkn_Botz.BOT_UPTIME
@@ -105,7 +106,7 @@ class Rkn_AutoCaptionBot(Client):
             except:
                 pass
         
-    async def stop(self, *args):
+    async def stop(self, *args, **kwargs):
         # 🟢 Send Bot Stopped Log
         if hasattr(self, 'logger'):
             try:
@@ -115,11 +116,6 @@ class Rkn_AutoCaptionBot(Client):
         await super().stop()
         print("Bot Stopped 🙄")
 
-# ✅ FIX: Kurigram ke liye run() method override
+# ✅ Simple run
 if __name__ == "__main__":
-    app = Rkn_AutoCaptionBot()
-    try:
-        app.run()
-    except TypeError:
-        # Agar Kurigram mein use_qr support nahi hai toh simple run
-        app.run()
+    Rkn_AutoCaptionBot().run()
