@@ -4,17 +4,15 @@ from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
 from .database import insert
 
-# ✅ Custom Style Class
-try:
-    from pyrogram.types import KeyboardButtonStyle
-except ImportError:
-    class KeyboardButtonStyle:
-        def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-            self.bg_primary = bg_primary
-            self.bg_danger = bg_danger
-            self.bg_success = bg_success
+# ✅ Custom Style Class - Pyrofork ke liye
+class KeyboardButtonStyle:
+    def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+        self.bg_primary = bg_primary
+        self.bg_danger = bg_danger
+        self.bg_success = bg_success
 
 def create_styled_button(text, url=None, callback_data=None, style_type="primary"):
+    """Create a styled button for Pyrofork"""
     if style_type == "primary":
         style = KeyboardButtonStyle(bg_primary=True)
     elif style_type == "danger":
@@ -25,11 +23,15 @@ def create_styled_button(text, url=None, callback_data=None, style_type="primary
         style = KeyboardButtonStyle(bg_primary=True)
     
     if callback_data:
-        return InlineKeyboardButton(text=text, callback_data=callback_data, style=style)
+        btn = InlineKeyboardButton(text=text, callback_data=callback_data)
     elif url:
-        return InlineKeyboardButton(text=text, url=url, style=style)
+        btn = InlineKeyboardButton(text=text, url=url)
     else:
-        return InlineKeyboardButton(text=text, style=style)
+        btn = InlineKeyboardButton(text=text)
+    
+    # Style ko button mein store karein
+    btn.style = style
+    return btn
 
 async def not_subscribed(_, client, message):
     user_id = int(message.from_user.id)
