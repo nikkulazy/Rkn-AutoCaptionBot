@@ -114,8 +114,12 @@ class Rkn_AutoCaptionBot(Client):
                 print(f"⚠️ Bot stop log error: {e}")
         await super().stop()
         print("Bot Stopped 🙄")
-        
-Rkn_AutoCaptionBot().run()
 
-# Rkn Developer 
-# Don't Remove Credit 😔
+# ✅ FIX: Kurigram ke liye run() method override
+if __name__ == "__main__":
+    app = Rkn_AutoCaptionBot()
+    try:
+        app.run()
+    except TypeError:
+        # Agar Kurigram mein use_qr support nahi hai toh simple run
+        app.run()
