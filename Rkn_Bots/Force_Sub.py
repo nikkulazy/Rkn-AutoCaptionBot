@@ -4,7 +4,7 @@ from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
 from .database import insert
 
-# ✅ Style import
+# ✅ Style Import
 try:
     from pyrogrammod.types import KeyboardButtonStyle
 except:
@@ -36,7 +36,7 @@ async def forces_sub(client, message):
         InlineKeyboardButton(
             text="📢 Join Update Channel 📢", 
             url=f"https://t.me/{Config.FORCE_SUB}",
-            style=KeyboardButtonStyle(bg_primary=True)
+            style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
         )
     ]]
     text = "**Sᴏʀʀy Dᴜᴅᴇ Yᴏᴜ'ʀᴇ Nᴏᴛ Jᴏɪɴᴇᴅ My Cʜᴀɴɴᴇʟ 😐. Sᴏ Pʟᴇᴀꜱᴇ Jᴏɪɴ Oᴜʀ Uᴩᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ Tᴏ Cᴄᴏɴᴛɪɴᴜᴇ**"
