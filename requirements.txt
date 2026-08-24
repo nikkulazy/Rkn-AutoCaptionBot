@@ -1,4 +1,4 @@
-git+https://github.com/Itz-fork/pyrogrammod.git
+pyrogrammod
 tgcrypto
 motor
 aiohttp
