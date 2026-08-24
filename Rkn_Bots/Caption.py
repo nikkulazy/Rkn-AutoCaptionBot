@@ -7,21 +7,40 @@ from .database import addCapByUser, updateCapByUser, updateButtonsByUser, delete
 from .database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
 
-# ✅ Style Import
-try:
-    from pyrogrammod.types import InlineKeyboardButton, KeyboardButtonStyle
-except:
-    from pyrogram.types import InlineKeyboardButton
-    class KeyboardButtonStyle:
-        def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-            self.bg_primary = bg_primary
-            self.bg_danger = bg_danger
-            self.bg_success = bg_success
-
 # ==================== ADD LOGGER IMPORT ====================
 from .logger import Logger
 
 print("🔄 Loading Caption.py...")
+
+# ✅ Style Class - Pyrogram ke liye workaround
+class KeyboardButtonStyle:
+    def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+        self.bg_primary = bg_primary
+        self.bg_danger = bg_danger
+        self.bg_success = bg_success
+
+# ✅ Helper function - Style ke saath button banane ke liye
+def create_styled_button(text, callback_data=None, url=None, style_type="primary"):
+    """Create a styled button - Always Blue (Primary)"""
+    if style_type == "primary":
+        style = KeyboardButtonStyle(bg_primary=True)
+    elif style_type == "danger":
+        style = KeyboardButtonStyle(bg_danger=True)
+    elif style_type == "success":
+        style = KeyboardButtonStyle(bg_success=True)
+    else:
+        style = KeyboardButtonStyle(bg_primary=True)
+    
+    if callback_data:
+        btn = types.InlineKeyboardButton(text=text, callback_data=callback_data)
+    elif url:
+        btn = types.InlineKeyboardButton(text=text, url=url)
+    else:
+        btn = types.InlineKeyboardButton(text=text)
+    
+    # Style ko button mein store karo
+    btn._style = style
+    return btn
 
 # ==================== MAIN MENU BUTTONS ====================
 
@@ -29,28 +48,12 @@ async def main_menu_buttons():
     """Main menu with buttons - All Primary (Blue)"""
     buttons = types.InlineKeyboardMarkup([
         [
-            types.InlineKeyboardButton(
-                "📝 Set Caption", 
-                callback_data="set_caption",
-                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-            ),
-            types.InlineKeyboardButton(
-                "📎 Add Button", 
-                callback_data="add_button",
-                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-            )
+            create_styled_button("📝 Set Caption", callback_data="set_caption"),
+            create_styled_button("📎 Add Button", callback_data="add_button")
         ], 
         [
-            types.InlineKeyboardButton(
-                "📢 Main Channel", 
-                url="https://t.me/wolverine273",
-                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-            ),
-            types.InlineKeyboardButton(
-                "💬 Help Group", 
-                url="https://t.me/WOLVERIN_P",
-                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-            )
+            create_styled_button("📢 Main Channel", url="https://t.me/wolverine273"),
+            create_styled_button("💬 Help Group", url="https://t.me/WOLVERIN_P")
         ]
     ])
     return buttons
@@ -58,13 +61,7 @@ async def main_menu_buttons():
 async def back_button_only():
     """Only back button - Primary (Blue)"""
     buttons = types.InlineKeyboardMarkup([
-        [
-            types.InlineKeyboardButton(
-                "🔙 Back to Menu", 
-                callback_data="back_to_menu",
-                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-            )
-        ]
+        [create_styled_button("🔙 Back to Menu", callback_data="back_to_menu")]
     ])
     return buttons
 
@@ -464,11 +461,7 @@ async def setButtons(bot, message):
                 if text and url:
                     if url.startswith(("https://", "http://", "t.me/")):
                         # ✅ Primary Style with Blue
-                        button = InlineKeyboardButton(
-                            text=text, 
-                            url=url,
-                            style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-                        )
+                        button = create_styled_button(text, url=url, style_type="primary")
                         buttons_data.append([button])
                     else:
                         return await message.reply_text(f"❌ Invalid URL: `{url}`")
@@ -678,13 +671,7 @@ async def help_cmd(bot, message):
         pass
     
     buttons = types.InlineKeyboardMarkup([
-        [
-            types.InlineKeyboardButton(
-                "🏠 Main Menu", 
-                callback_data="back_to_menu",
-                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
-            )
-        ]
+        [create_styled_button("🏠 Main Menu", callback_data="back_to_menu")]
     ])
     
     await message.reply_text(
