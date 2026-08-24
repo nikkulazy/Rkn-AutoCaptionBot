@@ -1,5 +1,5 @@
 from pyrogram import Client, filters, errors, types, enums
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButtonStyle
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids, users
@@ -12,6 +12,13 @@ from pyrogram.errors import FloodWait
 from .logger import Logger
 
 print("🔄 Loading Caption.py...")
+
+# ✅ Custom Style Class - Kurigram ke liye
+class KeyboardButtonStyle:
+    def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+        self.bg_primary = bg_primary
+        self.bg_danger = bg_danger
+        self.bg_success = bg_success
 
 # ✅ Helper function - Style ke saath button banane ke liye
 def create_styled_button(text, callback_data=None, url=None, style_type="primary"):
@@ -26,11 +33,15 @@ def create_styled_button(text, callback_data=None, url=None, style_type="primary
         style = KeyboardButtonStyle(bg_primary=True)
     
     if callback_data:
-        return InlineKeyboardButton(text=text, callback_data=callback_data, style=style)
+        btn = InlineKeyboardButton(text=text, callback_data=callback_data)
     elif url:
-        return InlineKeyboardButton(text=text, url=url, style=style)
+        btn = InlineKeyboardButton(text=text, url=url)
     else:
-        return InlineKeyboardButton(text=text, style=style)
+        btn = InlineKeyboardButton(text=text)
+    
+    # Style ko button mein store karo
+    btn._style = style
+    return btn
 
 # ==================== MAIN MENU BUTTONS ====================
 
