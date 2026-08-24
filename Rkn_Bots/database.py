@@ -27,106 +27,70 @@ async def delete(id):
 # ============ USER-BASED FUNCTIONS ============
 
 async def addCapByUser(user_id, chnl_id, caption, buttons=None):
-    dets = {
-        "user_id": user_id, 
-        "chnl_id": chnl_id, 
-        "caption": caption,
-        "buttons": buttons if buttons else []
-    }
+    dets = {"user_id": user_id, "chnl_id": chnl_id, "caption": caption}
+    if buttons:
+        dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
 
 async def updateCapByUser(user_id, caption):
-    await chnl_ids.update_one(
-        {"user_id": user_id}, 
-        {"$set": {"caption": caption}}
-    )
+    await chnl_ids.update_one({"user_id": user_id}, {"$set": {"caption": caption}})
 
 async def updateButtonsByUser(user_id, buttons):
-    buttons_list = []
-    for btn in buttons:
-        if isinstance(btn, list) and len(btn) > 0:
-            buttons_list.append({
-                "text": btn[0].text,
-                "url": btn[0].url
-            })
-    await chnl_ids.update_one(
-        {"user_id": user_id}, 
-        {"$set": {"buttons": buttons_list}}
-    )
+    buttons_dict = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
+    doc = await chnl_ids.find_one({"user_id": user_id})
+    if doc:
+        await chnl_ids.update_one({"user_id": user_id}, {"$set": {"buttons": buttons_dict}})
+    else:
+        await chnl_ids.insert_one({"user_id": user_id, "buttons": buttons_dict})
 
 async def deleteButtonsByUser(user_id):
-    await chnl_ids.update_one(
-        {"user_id": user_id}, 
-        {"$set": {"buttons": []}}
-    )
+    await chnl_ids.update_one({"user_id": user_id}, {"$unset": {"buttons": ""}})
 
 async def getChannelDataByUser(user_id):
     data = await chnl_ids.find_one({"user_id": user_id})
-    if data:
-        if data.get("buttons") and len(data["buttons"]) > 0:
-            from pyrogram.types import InlineKeyboardButton
-            buttons = []
-            for btn in data["buttons"]:
-                if isinstance(btn, dict) and "text" in btn and "url" in btn:
-                    buttons.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-            data["buttons"] = buttons
-        else:
-            data["buttons"] = []
+    if data and "buttons" in data and data["buttons"]:
+        from pyrogram.types import InlineKeyboardButton
+        data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
     return data
 
 # ============ CHANNEL-BASED FUNCTIONS ============
 
 async def addCap(chnl_id, caption, buttons=None):
-    dets = {
-        "chnl_id": chnl_id, 
-        "caption": caption,
-        "buttons": buttons if buttons else []
-    }
+    dets = {"chnl_id": chnl_id, "caption": caption}
+    if buttons:
+        dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
 
-async def updateCap(chnl_id, caption):
-    await chnl_ids.update_one(
-        {"chnl_id": chnl_id}, 
-        {"$set": {"caption": caption}}
-    )
+async def updateCap(chnl_id, caption, buttons=None):
+    update_data = {"caption": caption}
+    if buttons is not None:
+        update_data["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
+    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": update_data}, upsert=True)
 
 async def updateButtons(chnl_id, buttons):
-    buttons_list = []
-    for btn in buttons:
-        if isinstance(btn, list) and len(btn) > 0:
-            buttons_list.append({
-                "text": btn[0].text,
-                "url": btn[0].url
-            })
-    await chnl_ids.update_one(
-        {"chnl_id": chnl_id}, 
-        {"$set": {"buttons": buttons_list}}
-    )
+    buttons_dict = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
+    doc = await chnl_ids.find_one({"chnl_id": chnl_id})
+    if doc:
+        await chnl_ids.update_one({"chnl_id": chnl_id}, {"$set": {"buttons": buttons_dict}})
+    else:
+        await chnl_ids.insert_one({"chnl_id": chnl_id, "buttons": buttons_dict})
 
 async def getChannelData(chnl_id):
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
-    if data:
-        if data.get("buttons") and len(data["buttons"]) > 0:
-            from pyrogram.types import InlineKeyboardButton
-            buttons = []
-            for btn in data["buttons"]:
-                if isinstance(btn, dict) and "text" in btn and "url" in btn:
-                    buttons.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-            data["buttons"] = buttons
-        else:
-            data["buttons"] = []
+    if data and "buttons" in data and data["buttons"]:
+        from pyrogram.types import InlineKeyboardButton
+        data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
     return data
 
 async def deleteButtons(chnl_id):
-    await chnl_ids.update_one(
-        {"chnl_id": chnl_id}, 
-        {"$set": {"buttons": []}}
-    )
+    await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
 
 # ============ RESET FUNCTIONS ============
 
 async def resetChannelData(chnl_id):
     await chnl_ids.delete_many({"chnl_id": chnl_id})
+    print(f"✅ Reset data for channel: {chnl_id}")
 
 async def resetUserData(user_id):
     await chnl_ids.delete_many({"user_id": user_id})
+    print(f"✅ Reset data for user: {user_id}")
