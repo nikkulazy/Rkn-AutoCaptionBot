@@ -68,7 +68,16 @@ async def deleteButtonsByUser(user_id):
 async def getChannelDataByUser(user_id):
     data = await chnl_ids.find_one({"user_id": user_id})
     if data and "buttons" in data and data["buttons"]:
-        from pyrogram.types import InlineKeyboardButton, KeyboardButtonStyle
+        from pyrogram.types import InlineKeyboardButton
+        
+        try:
+            from pyrogram.types import KeyboardButtonStyle
+        except ImportError:
+            class KeyboardButtonStyle:
+                def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+                    self.bg_primary = bg_primary
+                    self.bg_danger = bg_danger
+                    self.bg_success = bg_success
         
         restored_buttons = []
         for btn in data["buttons"]:
@@ -138,7 +147,16 @@ async def updateButtons(chnl_id, buttons):
 async def getChannelData(chnl_id):
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
     if data and "buttons" in data and data["buttons"]:
-        from pyrogram.types import InlineKeyboardButton, KeyboardButtonStyle
+        from pyrogram.types import InlineKeyboardButton
+        
+        try:
+            from pyrogram.types import KeyboardButtonStyle
+        except ImportError:
+            class KeyboardButtonStyle:
+                def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+                    self.bg_primary = bg_primary
+                    self.bg_danger = bg_danger
+                    self.bg_success = bg_success
         
         restored_buttons = []
         for btn in data["buttons"]:
