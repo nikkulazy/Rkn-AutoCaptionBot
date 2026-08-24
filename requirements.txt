@@ -1,5 +1,4 @@
 pyrofork
-git+https://github.com/Mayuri-Chan/tgcrypto-pyrofork
+tgcrypto
 motor
 aiohttp
-Pillow
