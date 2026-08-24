@@ -65,7 +65,7 @@ class Rkn_AutoCaptionBot(Client):
             api_hash=Rkn_Botz.API_HASH,
             bot_token=Rkn_Botz.BOT_TOKEN,
             workers=200,
-            plugins={"root": "."},
+            plugins={"root": "plugins"},
             sleep_threshold=15,
         )
 
