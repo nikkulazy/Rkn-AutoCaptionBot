@@ -70,14 +70,12 @@ async def getChannelDataByUser(user_id):
     if data and "buttons" in data and data["buttons"]:
         from pyrogram.types import InlineKeyboardButton
         
-        try:
-            from pyrogram.types import KeyboardButtonStyle
-        except ImportError:
-            class KeyboardButtonStyle:
-                def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-                    self.bg_primary = bg_primary
-                    self.bg_danger = bg_danger
-                    self.bg_success = bg_success
+        # Custom Style Class
+        class KeyboardButtonStyle:
+            def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+                self.bg_primary = bg_primary
+                self.bg_danger = bg_danger
+                self.bg_success = bg_success
         
         restored_buttons = []
         for btn in data["buttons"]:
@@ -88,7 +86,9 @@ async def getChannelDataByUser(user_id):
                     bg_danger=btn["style"].get("bg_danger", False),
                     bg_success=btn["style"].get("bg_success", False),
                 )
-            button = InlineKeyboardButton(text=btn["text"], url=btn["url"], style=style)
+            button = InlineKeyboardButton(text=btn["text"], url=btn["url"])
+            if style:
+                button.style = style
             restored_buttons.append([button])
         data["buttons"] = restored_buttons
     return data
@@ -149,14 +149,11 @@ async def getChannelData(chnl_id):
     if data and "buttons" in data and data["buttons"]:
         from pyrogram.types import InlineKeyboardButton
         
-        try:
-            from pyrogram.types import KeyboardButtonStyle
-        except ImportError:
-            class KeyboardButtonStyle:
-                def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-                    self.bg_primary = bg_primary
-                    self.bg_danger = bg_danger
-                    self.bg_success = bg_success
+        class KeyboardButtonStyle:
+            def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+                self.bg_primary = bg_primary
+                self.bg_danger = bg_danger
+                self.bg_success = bg_success
         
         restored_buttons = []
         for btn in data["buttons"]:
@@ -167,7 +164,9 @@ async def getChannelData(chnl_id):
                     bg_danger=btn["style"].get("bg_danger", False),
                     bg_success=btn["style"].get("bg_success", False),
                 )
-            button = InlineKeyboardButton(text=btn["text"], url=btn["url"], style=style)
+            button = InlineKeyboardButton(text=btn["text"], url=btn["url"])
+            if style:
+                button.style = style
             restored_buttons.append([button])
         data["buttons"] = restored_buttons
     return data
