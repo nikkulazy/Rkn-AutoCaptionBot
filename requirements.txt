@@ -1,5 +1,4 @@
-pyrofork
+git+https://github.com/Itz-fork/pyrogrammod.git
 tgcrypto
 motor
 aiohttp
-Pillow>=10.0.0
