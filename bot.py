@@ -1,16 +1,13 @@
-# bot.py - Complete with Thumbnail Watermark Support
 # (c) @RknDeveloperr
+# Rkn Developer 
+# Don't Remove Credit 😔
 
 from aiohttp import web
 from pyrogram import Client
 from config import Rkn_Bots, Rkn_Bots as Rkn_Botz
 from Rkn_Bots.web_support import web_server
-import asyncio
-import signal
-import sys
-import os
 
-# Logger import
+# ✅ Logger ko import karo
 try:
     from Rkn_Bots.logger import Logger
 except ImportError:
@@ -46,18 +43,6 @@ except ImportError:
             pass
         async def system_error(self, *args, **kwargs):
             pass
-        async def forward_file_to_log(self, *args, **kwargs):
-            pass
-
-# Thumbnail Watermark import
-try:
-    from Rkn_Bots.thumbnail_watermark import init_thumb_watermark
-    THUMB_WATERMARK_AVAILABLE = True
-except ImportError:
-    print("⚠️ Thumbnail Watermark not found, continuing without it")
-    THUMB_WATERMARK_AVAILABLE = False
-    async def init_thumb_watermark(bot):
-        return None
 
 class Rkn_AutoCaptionBot(Client):
     def __init__(self):
@@ -70,9 +55,6 @@ class Rkn_AutoCaptionBot(Client):
             plugins={"root": "Rkn_Bots"},
             sleep_threshold=15,
         )
-        self.is_running = True
-        self.web_app = None
-        self.thumb_watermark = None
 
     async def start(self):
         await super().start()
@@ -80,20 +62,10 @@ class Rkn_AutoCaptionBot(Client):
         self.uptime = Rkn_Botz.BOT_UPTIME
         self.force_channel = Rkn_Bots.FORCE_SUB
         
-        # Initialize Logger
+        # 🟢 Initialize Logger
         self.logger = Logger(self)
         
-        # Initialize Thumbnail Watermark
-        if THUMB_WATERMARK_AVAILABLE:
-            try:
-                self.thumb_watermark = await init_thumb_watermark(self)
-                print("✅ Thumbnail Watermark initialized successfully!")
-            except Exception as e:
-                print(f"⚠️ Thumbnail Watermark init error: {e}")
-        else:
-            print("ℹ️ Thumbnail Watermark is not available")
-        
-        # Send Bot Started Log
+        # 🟢 Send Bot Started Log to Channel
         try:
             await self.logger.bot_started()
         except Exception as e:
@@ -106,24 +78,14 @@ class Rkn_AutoCaptionBot(Client):
                 self.invitelink = link
             except Exception as e:
                 print(e)
+                print("Make Sure Bot admin in force sub channel")
                 self.force_channel = None
         
         # Web Server Setup
-        try:
-            self.web_app = web.AppRunner(await web_server())
-            await self.web_app.setup()
-            site = web.TCPSite(self.web_app, "0.0.0.0", Rkn_Bots.PORT)
-            await site.start()
-            print(f"✅ Web server started on port {Rkn_Bots.PORT}")
-        except Exception as e:
-            print(f"⚠️ Web server error: {e}")
-        
-        # Signal handlers
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            try:
-                signal.signal(sig, lambda s, f: asyncio.create_task(self.shutdown()))
-            except Exception as e:
-                print(f"⚠️ Signal handler error: {e}")
+        app = web.AppRunner(await web_server())
+        await app.setup()
+        bind_address = "0.0.0.0"
+        await web.TCPSite(app, bind_address, Rkn_Bots.PORT).start()
         
         # Console Output
         print(f"\n{'='*50}")
@@ -138,67 +100,22 @@ class Rkn_AutoCaptionBot(Client):
                     admin_id, 
                     f"**🚀 {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️**\n\n"
                     f"✅ Bot is now LIVE!\n"
-                    f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}\n\n"
-                    f"📌 **Watermark Commands (Send in Channel):**\n"
-                    f"• `/setwatermark Text` - Set watermark\n"
-                    f"• `/removewatermark` - Remove watermark"
+                    f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}"
                 )
-            except Exception as e:
-                print(f"⚠️ Could not notify admin {admin_id}: {e}")
+            except:
+                pass
         
-    async def shutdown(self):
-        """Graceful shutdown handler"""
-        if not self.is_running:
-            return
-        self.is_running = False
-        print("🔄 Shutting down gracefully...")
-        
+    async def stop(self, *args):
+        # 🟢 Send Bot Stopped Log
         if hasattr(self, 'logger'):
             try:
                 await self.logger.bot_stopped()
             except Exception as e:
                 print(f"⚠️ Bot stop log error: {e}")
+        await super().stop()
+        print("Bot Stopped 🙄")
         
-        if self.web_app:
-            try:
-                await self.web_app.cleanup()
-                print("✅ Web server stopped")
-            except Exception as e:
-                print(f"⚠️ Web server stop error: {e}")
-        
-        # Clean temp files
-        try:
-            import shutil
-            if os.path.exists("thumb_watermark"):
-                shutil.rmtree("thumb_watermark")
-                print("✅ Cleaned thumbnail temp files")
-        except Exception as e:
-            print(f"⚠️ Cleanup error: {e}")
-        
-        # Stop bot
-        try:
-            await super().stop()
-            print("✅ Bot stopped successfully")
-        except Exception as e:
-            print(f"⚠️ Bot stop error: {e}")
-        
-        sys.exit(0)
-        
-    async def stop(self, *args):
-        await self.shutdown()
-
-# ==================== RUN BOT ====================
-
-if __name__ == "__main__":
-    try:
-        print("🚀 Starting Rkn-AutoCaptionBot...")
-        print("📌 Press Ctrl+C to stop")
-        Rkn_AutoCaptionBot().run()
-    except KeyboardInterrupt:
-        print("\n🛑 Bot stopped by user")
-    except Exception as e:
-        print(f"❌ Fatal error: {e}")
-        sys.exit(1)
+Rkn_AutoCaptionBot().run()
 
 # Rkn Developer 
 # Don't Remove Credit 😔
