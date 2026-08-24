@@ -1,5 +1,5 @@
 from pyrogram import Client, filters, errors, types, enums
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButtonStyle
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids, users
@@ -13,7 +13,17 @@ from .logger import Logger
 
 print("🔄 Loading Caption.py...")
 
-# ✅ Pyrofork Style - Direct import se kaam karega
+# ✅ Custom Style Class - Pyrofork ke liye (agar import na ho)
+try:
+    from pyrogram.types import KeyboardButtonStyle
+except ImportError:
+    class KeyboardButtonStyle:
+        def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+            self.bg_primary = bg_primary
+            self.bg_danger = bg_danger
+            self.bg_success = bg_success
+
+# ✅ Helper function - Style ke saath button banane ke liye
 def create_styled_button(text, callback_data=None, url=None, style_type="primary"):
     """Create a styled button - Always Blue (Primary)"""
     if style_type == "primary":
