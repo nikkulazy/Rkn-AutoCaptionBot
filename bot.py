@@ -5,7 +5,18 @@
 from aiohttp import web
 from pyrogram import Client
 from config import Rkn_Bots as Rkn_Botz
-from web_support import web_server
+
+# ✅ web_support import with fallback
+try:
+    from web_support import web_server
+except ImportError:
+    print("⚠️ web_support not found, using dummy web server")
+    async def web_server():
+        web_app = web.Application()
+        async def root_handler(request):
+            return web.json_response({"status": "running", "bot": "Rkn-AutoCaptionBot"})
+        web_app.router.add_get("/", root_handler)
+        return web_app
 
 # ✅ Logger
 try:
