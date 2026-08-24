@@ -32,11 +32,11 @@ async def addCapByUser(user_id, chnl_id, caption, buttons=None):
         dets["buttons"] = []
         for btn in buttons:
             btn_data = {"text": btn[0].text, "url": btn[0].url}
-            if hasattr(btn[0], '_style'):
+            if hasattr(btn[0], 'style'):
                 btn_data["style"] = {
-                    'bg_primary': getattr(btn[0]._style, 'bg_primary', False),
-                    'bg_danger': getattr(btn[0]._style, 'bg_danger', False),
-                    'bg_success': getattr(btn[0]._style, 'bg_success', False),
+                    'bg_primary': getattr(btn[0].style, 'bg_primary', False),
+                    'bg_danger': getattr(btn[0].style, 'bg_danger', False),
+                    'bg_success': getattr(btn[0].style, 'bg_success', False),
                 }
             dets["buttons"].append(btn_data)
     await chnl_ids.insert_one(dets)
@@ -48,11 +48,11 @@ async def updateButtonsByUser(user_id, buttons):
     buttons_dict = []
     for btn in buttons:
         btn_data = {"text": btn[0].text, "url": btn[0].url}
-        if hasattr(btn[0], '_style'):
+        if hasattr(btn[0], 'style'):
             btn_data["style"] = {
-                'bg_primary': getattr(btn[0]._style, 'bg_primary', False),
-                'bg_danger': getattr(btn[0]._style, 'bg_danger', False),
-                'bg_success': getattr(btn[0]._style, 'bg_success', False),
+                'bg_primary': getattr(btn[0].style, 'bg_primary', False),
+                'bg_danger': getattr(btn[0].style, 'bg_danger', False),
+                'bg_success': getattr(btn[0].style, 'bg_success', False),
             }
         buttons_dict.append(btn_data)
     
@@ -68,17 +68,18 @@ async def deleteButtonsByUser(user_id):
 async def getChannelDataByUser(user_id):
     data = await chnl_ids.find_one({"user_id": user_id})
     if data and "buttons" in data and data["buttons"]:
-        from pyrogram.types import InlineKeyboardButton
+        from pyrogram.types import InlineKeyboardButton, KeyboardButtonStyle
         
         restored_buttons = []
         for btn in data["buttons"]:
-            button = InlineKeyboardButton(text=btn["text"], url=btn["url"])
+            style = None
             if "style" in btn:
-                button._style = {
-                    'bg_primary': btn["style"].get("bg_primary", False),
-                    'bg_danger': btn["style"].get("bg_danger", False),
-                    'bg_success': btn["style"].get("bg_success", False),
-                }
+                style = KeyboardButtonStyle(
+                    bg_primary=btn["style"].get("bg_primary", False),
+                    bg_danger=btn["style"].get("bg_danger", False),
+                    bg_success=btn["style"].get("bg_success", False),
+                )
+            button = InlineKeyboardButton(text=btn["text"], url=btn["url"], style=style)
             restored_buttons.append([button])
         data["buttons"] = restored_buttons
     return data
@@ -91,11 +92,11 @@ async def addCap(chnl_id, caption, buttons=None):
         dets["buttons"] = []
         for btn in buttons:
             btn_data = {"text": btn[0].text, "url": btn[0].url}
-            if hasattr(btn[0], '_style'):
+            if hasattr(btn[0], 'style'):
                 btn_data["style"] = {
-                    'bg_primary': getattr(btn[0]._style, 'bg_primary', False),
-                    'bg_danger': getattr(btn[0]._style, 'bg_danger', False),
-                    'bg_success': getattr(btn[0]._style, 'bg_success', False),
+                    'bg_primary': getattr(btn[0].style, 'bg_primary', False),
+                    'bg_danger': getattr(btn[0].style, 'bg_danger', False),
+                    'bg_success': getattr(btn[0].style, 'bg_success', False),
                 }
             dets["buttons"].append(btn_data)
     await chnl_ids.insert_one(dets)
@@ -106,11 +107,11 @@ async def updateCap(chnl_id, caption, buttons=None):
         buttons_dict = []
         for btn in buttons:
             btn_data = {"text": btn[0].text, "url": btn[0].url}
-            if hasattr(btn[0], '_style'):
+            if hasattr(btn[0], 'style'):
                 btn_data["style"] = {
-                    'bg_primary': getattr(btn[0]._style, 'bg_primary', False),
-                    'bg_danger': getattr(btn[0]._style, 'bg_danger', False),
-                    'bg_success': getattr(btn[0]._style, 'bg_success', False),
+                    'bg_primary': getattr(btn[0].style, 'bg_primary', False),
+                    'bg_danger': getattr(btn[0].style, 'bg_danger', False),
+                    'bg_success': getattr(btn[0].style, 'bg_success', False),
                 }
             buttons_dict.append(btn_data)
         update_data["buttons"] = buttons_dict
@@ -120,11 +121,11 @@ async def updateButtons(chnl_id, buttons):
     buttons_dict = []
     for btn in buttons:
         btn_data = {"text": btn[0].text, "url": btn[0].url}
-        if hasattr(btn[0], '_style'):
+        if hasattr(btn[0], 'style'):
             btn_data["style"] = {
-                'bg_primary': getattr(btn[0]._style, 'bg_primary', False),
-                'bg_danger': getattr(btn[0]._style, 'bg_danger', False),
-                'bg_success': getattr(btn[0]._style, 'bg_success', False),
+                'bg_primary': getattr(btn[0].style, 'bg_primary', False),
+                'bg_danger': getattr(btn[0].style, 'bg_danger', False),
+                'bg_success': getattr(btn[0].style, 'bg_success', False),
             }
         buttons_dict.append(btn_data)
     
@@ -137,17 +138,18 @@ async def updateButtons(chnl_id, buttons):
 async def getChannelData(chnl_id):
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
     if data and "buttons" in data and data["buttons"]:
-        from pyrogram.types import InlineKeyboardButton
+        from pyrogram.types import InlineKeyboardButton, KeyboardButtonStyle
         
         restored_buttons = []
         for btn in data["buttons"]:
-            button = InlineKeyboardButton(text=btn["text"], url=btn["url"])
+            style = None
             if "style" in btn:
-                button._style = {
-                    'bg_primary': btn["style"].get("bg_primary", False),
-                    'bg_danger': btn["style"].get("bg_danger", False),
-                    'bg_success': btn["style"].get("bg_success", False),
-                }
+                style = KeyboardButtonStyle(
+                    bg_primary=btn["style"].get("bg_primary", False),
+                    bg_danger=btn["style"].get("bg_danger", False),
+                    bg_success=btn["style"].get("bg_success", False),
+                )
+            button = InlineKeyboardButton(text=btn["text"], url=btn["url"], style=style)
             restored_buttons.append([button])
         data["buttons"] = restored_buttons
     return data
