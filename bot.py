@@ -4,11 +4,12 @@
 
 from aiohttp import web
 from pyrogram import Client
-from config import Rkn_Bots, Rkn_Bots as Rkn_Botz
-from Rkn_Bots.web_support import web_server
+from config import Rkn_Bots as Rkn_Botz
+from web_support import web_server
 
+# ✅ Logger
 try:
-    from Rkn_Bots.logger import Logger
+    from logger import Logger
 except ImportError:
     print("⚠️ Logger not found, creating dummy logger")
     class Logger:
@@ -22,6 +23,8 @@ except ImportError:
             pass
         async def channel_setup(self, *args, **kwargs):
             pass
+        async def channel_removed(self, *args, **kwargs):
+            pass
         async def caption_set(self, *args, **kwargs):
             pass
         async def caption_deleted(self, *args, **kwargs):
@@ -29,6 +32,8 @@ except ImportError:
         async def buttons_set(self, *args, **kwargs):
             pass
         async def buttons_removed(self, *args, **kwargs):
+            pass
+        async def caption_edited(self, *args, **kwargs):
             pass
         async def broadcast_started(self, *args, **kwargs):
             pass
@@ -45,11 +50,11 @@ class Rkn_AutoCaptionBot(Client):
     def __init__(self):
         super().__init__(
             name="Rkn-Advance-Caption-Bot",
-            api_id=Rkn_Bots.API_ID,
-            api_hash=Rkn_Bots.API_HASH,
-            bot_token=Rkn_Bots.BOT_TOKEN,
+            api_id=Rkn_Botz.API_ID,
+            api_hash=Rkn_Botz.API_HASH,
+            bot_token=Rkn_Botz.BOT_TOKEN,
             workers=200,
-            plugins={"root": "Rkn_Bots"},
+            plugins={"root": "."},
             sleep_threshold=15,
         )
 
@@ -57,46 +62,53 @@ class Rkn_AutoCaptionBot(Client):
         await super().start()
         me = await self.get_me()
         self.uptime = Rkn_Botz.BOT_UPTIME
-        self.force_channel = Rkn_Bots.FORCE_SUB
+        self.force_channel = Rkn_Botz.FORCE_SUB
         
+        # 🟢 Initialize Logger
         self.logger = Logger(self)
         
+        # 🟢 Send Bot Started Log to Channel
         try:
             await self.logger.bot_started()
         except Exception as e:
             print(f"⚠️ Bot start log error: {e}")
         
-        if Rkn_Bots.FORCE_SUB:
+        # Force Sub Channel Setup
+        if Rkn_Botz.FORCE_SUB:
             try:
-                link = await self.export_chat_invite_link(Rkn_Bots.FORCE_SUB)
+                link = await self.export_chat_invite_link(Rkn_Botz.FORCE_SUB)
                 self.invitelink = link
             except Exception as e:
                 print(e)
                 print("Make Sure Bot admin in force sub channel")
                 self.force_channel = None
         
+        # Web Server Setup
         app = web.AppRunner(await web_server())
         await app.setup()
         bind_address = "0.0.0.0"
-        await web.TCPSite(app, bind_address, Rkn_Bots.PORT).start()
+        await web.TCPSite(app, bind_address, Rkn_Botz.PORT).start()
         
+        # Console Output
         print(f"\n{'='*50}")
         print(f"✅ {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️")
-        print(f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}")
+        print(f"📋 Log Channel: {Rkn_Botz.LOG_CHANNEL or 'Not Set'}")
         print(f"{'='*50}\n")
         
-        for admin_id in Rkn_Bots.ADMIN:
+        # Notify Admins
+        for admin_id in Rkn_Botz.ADMIN:
             try:
                 await self.send_message(
                     admin_id, 
                     f"**🚀 {me.first_name} Iꜱ Sᴛᴀʀᴛᴇᴅ.....✨️**\n\n"
                     f"✅ Bot is now LIVE!\n"
-                    f"📋 Log Channel: {Rkn_Bots.LOG_CHANNEL or 'Not Set'}"
+                    f"📋 Log Channel: {Rkn_Botz.LOG_CHANNEL or 'Not Set'}"
                 )
             except:
                 pass
         
     async def stop(self, *args):
+        # 🟢 Send Bot Stopped Log
         if hasattr(self, 'logger'):
             try:
                 await self.logger.bot_stopped()
