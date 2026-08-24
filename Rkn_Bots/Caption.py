@@ -32,24 +32,24 @@ async def main_menu_buttons():
             types.InlineKeyboardButton(
                 "📝 Set Caption", 
                 callback_data="set_caption",
-                style=KeyboardButtonStyle(bg_primary=True)
+                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
             ),
             types.InlineKeyboardButton(
                 "📎 Add Button", 
                 callback_data="add_button",
-                style=KeyboardButtonStyle(bg_primary=True)
+                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
             )
         ], 
         [
             types.InlineKeyboardButton(
                 "📢 Main Channel", 
                 url="https://t.me/wolverine273",
-                style=KeyboardButtonStyle(bg_primary=True)
+                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
             ),
             types.InlineKeyboardButton(
                 "💬 Help Group", 
                 url="https://t.me/WOLVERIN_P",
-                style=KeyboardButtonStyle(bg_primary=True)
+                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
             )
         ]
     ])
@@ -62,7 +62,7 @@ async def back_button_only():
             types.InlineKeyboardButton(
                 "🔙 Back to Menu", 
                 callback_data="back_to_menu",
-                style=KeyboardButtonStyle(bg_primary=True)
+                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
             )
         ]
     ])
@@ -467,7 +467,7 @@ async def setButtons(bot, message):
                         button = InlineKeyboardButton(
                             text=text, 
                             url=url,
-                            style=KeyboardButtonStyle(bg_primary=True)
+                            style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
                         )
                         buttons_data.append([button])
                     else:
@@ -682,7 +682,7 @@ async def help_cmd(bot, message):
             types.InlineKeyboardButton(
                 "🏠 Main Menu", 
                 callback_data="back_to_menu",
-                style=KeyboardButtonStyle(bg_primary=True)
+                style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
             )
         ]
     ])
