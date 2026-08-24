@@ -6,7 +6,23 @@ from database import addCap, updateCap, updateButtons, deleteButtons, getChannel
 from database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
-from logger import Logger
+
+# ✅ Logger import
+try:
+    from logger import Logger
+except ImportError:
+    print("⚠️ Logger not found")
+    class Logger:
+        def __init__(self, bot): pass
+        async def forward_file_to_log(self, *args, **kwargs): pass
+        async def caption_set(self, *args, **kwargs): pass
+        async def buttons_set(self, *args, **kwargs): pass
+        async def caption_deleted(self, *args, **kwargs): pass
+        async def buttons_removed(self, *args, **kwargs): pass
+        async def channel_setup(self, *args, **kwargs): pass
+        async def user_start(self, *args, **kwargs): pass
+        async def broadcast_started(self, *args, **kwargs): pass
+        async def broadcast_completed(self, *args, **kwargs): pass
 
 print("🔄 Loading Caption.py...")
 
@@ -17,7 +33,7 @@ async def main_menu_buttons():
         [
             types.InlineKeyboardButton("📝 Set Caption", callback_data="set_caption"),
             types.InlineKeyboardButton("📎 Add Button", callback_data="add_button")
-        ], 
+        ],
         [
             types.InlineKeyboardButton("📢 Main Channel", url="https://t.me/wolverine273"),
             types.InlineKeyboardButton("💬 Help Group", url="https://t.me/WOLVERIN_P")
@@ -92,11 +108,17 @@ async def start_cmd(bot, message):
     buttons = await main_menu_buttons()
     caption = await get_home_caption(user_id, first_name)
     
-    await message.reply_photo(
-        photo=Rkn_Bots.RKN_PIC,
-        caption=caption,
-        reply_markup=buttons
-    )
+    try:
+        await message.reply_photo(
+            photo=Rkn_Bots.RKN_PIC,
+            caption=caption,
+            reply_markup=buttons
+        )
+    except:
+        await message.reply_text(
+            caption,
+            reply_markup=buttons
+        )
 
 # ==================== CALLBACK QUERY HANDLER ====================
 
@@ -105,12 +127,6 @@ async def callback_handler(bot, callback_query):
     user_id = callback_query.from_user.id
     data = callback_query.data
     first_name = callback_query.from_user.first_name or "User"
-    
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
     
     if not callback_query.message:
         await callback_query.answer("Message not found!")
@@ -131,7 +147,7 @@ async def callback_handler(bot, callback_query):
                 caption=caption,
                 reply_markup=buttons
             )
-        except Exception as e:
+        except:
             await callback_query.message.reply_text(
                 caption,
                 reply_markup=buttons
@@ -404,16 +420,12 @@ async def setButtons(bot, message):
     except Exception as e:
         print(f"⚠️ Log error: {e}")
     
-    verify_data = await getChannelData(channel_id)
-    saved_buttons = verify_data.get("buttons", []) if verify_data else []
-    print(f"✅ Verified: {len(saved_buttons)} buttons saved for channel {channel_id}")
-    
     preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data])
     
     await message.reply_text(
         f"✅ **Buttons Set Successfully!**\n\n"
         f"📌 **Channel ID:** `{channel_id}`\n"
-        f"🔢 **Buttons Saved:** `{len(saved_buttons)}` button(s)\n\n"
+        f"🔢 **Buttons Saved:** `{len(buttons_data)}` button(s)\n\n"
         f"**Your Buttons:**\n{preview}\n\n"
         f"📌 Now post a file in this channel to see buttons!",
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
@@ -606,61 +618,20 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ==================== AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
+# ==================== AUTO EDIT CAPTION ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
     print(f"📩 New message in channel: {chnl_id}")
     
-    channel_title = None
-    try:
-        chat = await bot.get_chat(chnl_id)
-        channel_title = chat.title
-    except:
-        pass
-    
     cap_dets = await getChannelData(chnl_id)
     
-    if cap_dets:
-        print(f"📝 Caption: {cap_dets.get('caption')}")
-        buttons = cap_dets.get('buttons')
-        if buttons:
-            print(f"🔘 Buttons found: {len(buttons)} button(s)")
-        else:
-            print("🔘 No buttons found in data")
-    else:
+    if not cap_dets:
         print("❌ No data found for channel")
-        if message.media:
-            try:
-                logger = Logger(bot)
-                await logger.forward_file_to_log(message, chnl_id, channel_title, "Unknown")
-            except Exception as e:
-                print(f"⚠️ Log error: {e}")
         return
     
-    # ✅ Forward file to log channel if media
     if message.media:
-        try:
-            # Get file name
-            file_name = "Unknown_File"
-            if message.document and message.document.file_name:
-                file_name = message.document.file_name
-            elif message.video and message.video.file_name:
-                file_name = message.video.file_name
-            elif message.audio and message.audio.file_name:
-                file_name = message.audio.file_name
-            elif message.photo:
-                file_name = f"Photo_{message.id}.jpg"
-            elif message.voice:
-                file_name = "Voice_Message.ogg"
-            
-            logger = Logger(bot)
-            await logger.forward_file_to_log(message, chnl_id, channel_title, file_name)
-        except Exception as e:
-            print(f"⚠️ Log error: {e}")
-        
-        # ✅ Process caption and buttons
         for file_type in ("video", "audio", "document", "voice", "photo"):
             obj = getattr(message, file_type, None)
             if obj:
@@ -680,27 +651,24 @@ async def auto_edit_caption(bot, message):
                 print(f"📁 File: {file_name_clean}")
                 
                 try:
-                    if cap_dets:
-                        cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
-                        buttons = cap_dets.get("buttons", None)
-                        
-                        try:
-                            replaced_caption = cap.format(file_name=file_name_clean)
-                        except KeyError:
-                            replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name_clean)
-                        print(f"📝 New caption: {replaced_caption}")
-                        
-                        if buttons and len(buttons) > 0:
-                            print(f"🔘 Applying {len(buttons)} button(s)")
-                            reply_markup = types.InlineKeyboardMarkup(buttons)
-                            await message.edit(replaced_caption, reply_markup=reply_markup)
-                            print("✅ Caption and buttons edited successfully!")
-                        else:
-                            print("ℹ️ No buttons to apply, editing caption only")
-                            await message.edit(replaced_caption)
-                            print("✅ Caption edited successfully!")
+                    cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
+                    buttons = cap_dets.get("buttons", None)
+                    
+                    try:
+                        replaced_caption = cap.format(file_name=file_name_clean)
+                    except KeyError:
+                        replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name_clean)
+                    print(f"📝 New caption: {replaced_caption}")
+                    
+                    if buttons and len(buttons) > 0:
+                        print(f"🔘 Applying {len(buttons)} button(s)")
+                        reply_markup = types.InlineKeyboardMarkup(buttons)
+                        await message.edit(replaced_caption, reply_markup=reply_markup)
+                        print("✅ Caption and buttons edited successfully!")
                     else:
-                        print("ℹ️ No caption data found, only forwarding file")
+                        print("ℹ️ No buttons to apply, editing caption only")
+                        await message.edit(replaced_caption)
+                        print("✅ Caption edited successfully!")
                         
                 except FloodWait as e:
                     print(f"⏳ FloodWait: {e.x} seconds")
@@ -729,14 +697,8 @@ async def all_db_users_here(client, message):
 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["broadcast"]))
 async def broadcast(bot, message):
-    try:
-        logger = Logger(bot)
-    except Exception as e:
-        print(f"⚠️ Logger error: {e}")
-        logger = None
-    
-    if (message.reply_to_message):
-        rkn = await message.reply_text("Bot Processing.\nI am checking all bot users.")
+    if message.reply_to_message:
+        rkn = await message.reply_text("Bot Processing...")
         all_users = await getid()
         tot = await total_user()
         success = 0
@@ -744,46 +706,33 @@ async def broadcast(bot, message):
         deactivated = 0
         blocked = 0
         
-        if logger:
-            try:
-                await logger.broadcast_started(message.from_user.id, tot)
-            except Exception as e:
-                print(f"⚠️ Log error: {e}")
-        
-        await rkn.edit(f"bot ʙʀᴏᴀᴅᴄᴀsᴛɪɴɢ started...")
+        await rkn.edit(f"Broadcasting started...")
         async for user in all_users:
             try:
                 await asyncio.sleep(1)
                 await message.reply_to_message.copy(user['_id'])
                 success += 1
             except errors.InputUserDeactivated:
-                deactivated +=1
+                deactivated += 1
                 await delete({"_id": user['_id']})
             except errors.UserIsBlocked:
-                blocked +=1
+                blocked += 1
                 await delete({"_id": user['_id']})
-            except Exception as e:
+            except Exception:
                 failed += 1
                 await delete({"_id": user['_id']})
-                pass
             try:
-                await rkn.edit(f"<u>ʙʀᴏᴀᴅᴄᴀsᴛ ᴘʀᴏᴄᴇssɪɴɢ</u>\n\n• ᴛᴏᴛᴀʟ ᴜsᴇʀs: {tot}\n• sᴜᴄᴄᴇssғᴜʟ: {success}\n• ʙʟᴏᴄᴋᴇᴅ ᴜsᴇʀs: {blocked}\n• ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛs: {deactivated}\n• ᴜɴsᴜᴄᴄᴇssғᴜʟ: {failed}")
+                await rkn.edit(f"<u>Broadcast Processing</u>\n\n• Total: {tot}\n• Success: {success}\n• Blocked: {blocked}\n• Deleted: {deactivated}\n• Failed: {failed}")
             except FloodWait as e:
                 await asyncio.sleep(e.x)
         
-        if logger:
-            try:
-                await logger.broadcast_completed(message.from_user.id, success, failed, blocked, deactivated, tot)
-            except Exception as e:
-                print(f"⚠️ Log error: {e}")
-        
-        await rkn.edit(f"<u>ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u>\n\n• ᴛᴏᴛᴀʟ ᴜsᴇʀs: {tot}\n• sᴜᴄᴄᴇssғᴜʟ: {success}\n• ʙʟᴏᴄᴋᴇᴅ ᴜsᴇʀs: {blocked}\n• ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛs: {deactivated}\n• ᴜɴsᴜᴄᴄᴇssғᴜʟ: {failed}")
+        await rkn.edit(f"<u>Broadcast Completed</u>\n\n• Total: {tot}\n• Success: {success}\n• Blocked: {blocked}\n• Deleted: {deactivated}\n• Failed: {failed}")
 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("restart"))
 async def restart_bot(b, m):
-    rkn_msg = await b.send_message(text="**🔄 𝙿𝚁𝙾𝙲𝙴𝚂𝚂𝙴𝚂 𝚂𝚃𝙾𝙿𝙴𝙳. 𝙱𝙾𝚃 𝙸𝚂 𝚁𝙴𝚂𝚃𝙰𝚁𝚃𝙸𝙽𝙶...**", chat_id=m.chat.id)       
+    rkn_msg = await b.send_message(text="**🔄 Restarting...**", chat_id=m.chat.id)       
     await asyncio.sleep(3)
-    await rkn_msg.edit("**✅️ 𝙱𝙾𝚃 𝙸𝚂 𝚁𝙴𝚂𝚃𝙰𝚁𝚃𝙴𝙳. 𝙽𝙾𝚆 𝚈𝙾𝚄 𝙲𝙰𝙽 𝚄𝚂𝙴 𝙼𝙴**")
+    await rkn_msg.edit("**✅️ Bot Restarted!**")
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("reset_db"))
@@ -791,6 +740,6 @@ async def reset_db(bot, message):
     print("🔄 Resetting database...")
     user_id = message.from_user.id
     await resetUserData(user_id)
-    await message.reply("✅ Database reset for your channel! Please set up again.\n\nAdd me as admin in your channel and send `/set_caption`")
+    await message.reply("✅ Database reset for your channel!")
 
 print("✅ Caption.py loaded successfully!")
