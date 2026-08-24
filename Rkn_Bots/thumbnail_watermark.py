@@ -1,114 +1,139 @@
-# (c) @RknDeveloperr
-# Thumbnail Watermark Feature
-
-import os
-import asyncio
-from pyrogram import Client, filters, enums
-from pyrogram.types import Message
+from pyrogram import Client, filters, types, enums
 from PIL import Image, ImageDraw, ImageFont
-from config import Rkn_Bots
+import os, asyncio
 
-# ==================== THUMBNAIL WATERMARK FUNCTION ====================
+print("🔄 Loading thumbnail_watermark.py...")
 
-async def add_watermark_to_thumbnail(input_path, output_path, text="© Rkn Developer"):
-    """Add watermark text to thumbnail image"""
+# ==================== ADD WATERMARK TO THUMBNAIL ====================
+
+async def add_watermark_to_image(image_path, watermark_text=None):
+    """Add watermark text to image"""
     try:
         # Open image
-        img = Image.open(input_path)
+        img = Image.open(image_path)
         
-        # Create a drawing context
+        # Create drawing object
         draw = ImageDraw.Draw(img)
+        
+        # Load default font
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+        except:
+            font = ImageFont.load_default()
+        
+        # Watermark text
+        if not watermark_text:
+            watermark_text = "@RknDeveloper"
         
         # Get image dimensions
         width, height = img.size
         
-        # Font size based on image size
-        font_size = max(20, int(min(width, height) / 20))
+        # Calculate text position (bottom-right corner)
+        text_width = draw.textlength(watermark_text, font=font)
+        text_height = 20
+        x = width - text_width - 20
+        y = height - text_height - 20
         
-        # Try to load a font, fallback to default
-        try:
-            # Try to use a system font
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-        except:
-            # Fallback to default font
-            font = ImageFont.load_default()
-        
-        # Calculate text position (bottom-right corner with padding)
-        padding = 20
-        text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-        
-        x = width - text_width - padding
-        y = height - text_height - padding
-        
-        # Draw text shadow for better visibility
-        shadow_offset = 2
-        draw.text((x + shadow_offset, y + shadow_offset), text, font=font, fill=(0, 0, 0, 128))
-        
-        # Draw main text with semi-transparent background
-        # Draw background rectangle
-        bg_padding = 10
+        # Add semi-transparent background for better readability
         draw.rectangle(
-            [x - bg_padding, y - bg_padding, x + text_width + bg_padding, y + text_height + bg_padding],
-            fill=(0, 0, 0, 100)
+            [x - 10, y - 10, x + text_width + 10, y + text_height + 10],
+            fill=(0, 0, 0, 128)
         )
         
-        # Draw text in white
-        draw.text((x, y), text, font=font, fill=(255, 255, 255))
+        # Add watermark text
+        draw.text((x, y), watermark_text, fill=(255, 255, 255), font=font)
         
-        # Save the image
-        img.save(output_path, "JPEG", quality=95)
+        # Save image
+        img.save(image_path)
         return True
         
     except Exception as e:
-        print(f"❌ Error adding watermark: {e}")
+        print(f"❌ Watermark error: {e}")
         return False
 
-# ==================== THUMBNAIL PROCESSING ====================
+# ==================== AUTO WATERMARK ON PHOTOS ====================
 
-@Client.on_message(filters.channel & filters.media)
-async def process_thumbnail_with_watermark(bot, message: Message):
-    """Process thumbnail and add watermark"""
-    
-    # Check if message has media with thumbnail
-    if not message.media:
-        return
-    
-    # Check if we should process this channel
-    channel_id = message.chat.id
-    
-    # You can add channel filter logic here if needed
-    
-    # Process different media types
-    media_types = ["video", "document", "audio", "photo"]
-    
-    for media_type in media_types:
-        media_obj = getattr(message, media_type, None)
-        if not media_obj:
-            continue
+@Client.on_message(filters.photo & filters.private)
+async def auto_watermark_photo(client, message):
+    """Auto add watermark to photos"""
+    try:
+        # Download photo
+        photo_path = await message.download()
+        
+        # Add watermark
+        await add_watermark_to_image(photo_path, "@RknDeveloper")
+        
+        # Send back
+        await message.reply_photo(
+            photo=photo_path,
+            caption="✅ **Watermark Added!**\n\n📌 @RknDeveloper"
+        )
+        
+        # Clean up
+        os.remove(photo_path)
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        await message.reply(f"❌ Error: {e}")
+
+# ==================== THUMBNAIL WATERMARK FOR FILES ====================
+
+@Client.on_message(filters.document | filters.video)
+async def auto_watermark_file(client, message):
+    """Add watermark to file thumbnails"""
+    try:
+        # Check if file has thumbnail
+        if hasattr(message, 'thumb') and message.thumb:
+            # Download thumbnail
+            thumb_path = await message.download_thumb()
             
-        # Check if media has thumbnail
-        if hasattr(media_obj, "thumb"):
-            try:
-                # Download thumbnail
-                thumb_path = await bot.download_media(media_obj.thumb)
-                if thumb_path:
-                    # Add watermark
-                    output_path = f"{thumb_path}_watermarked.jpg"
-                    success = await add_watermark_to_thumbnail(thumb_path, output_path)
-                    
-                    if success:
-                        # Update message with watermarked thumbnail
-                        # Note: This requires editing the message, which may not be possible
-                        # for all media types. This is a placeholder for the logic.
-                        print(f"✅ Watermark added to thumbnail for {media_type} in channel {channel_id}")
-                    
-                    # Clean up
-                    try:
-                        os.remove(thumb_path)
-                    except:
-                        pass
-                    
-            except Exception as e:
-                print(f"⚠️ Error processing thumbnail: {e}")
+            if thumb_path:
+                # Add watermark
+                await add_watermark_to_image(thumb_path, "@RknDeveloper")
+                
+                # Send thumbnail back
+                await message.reply_photo(
+                    photo=thumb_path,
+                    caption="✅ **Thumbnail Watermark Added!**\n\n📌 @RknDeveloper"
+                )
+                
+                # Clean up
+                os.remove(thumb_path)
+        
+    except Exception as e:
+        print(f"❌ Thumbnail watermark error: {e}")
+
+# ==================== COMMAND TO ADD WATERMARK ====================
+
+@Client.on_message(filters.command("watermark") & filters.private)
+async def watermark_cmd(client, message):
+    """Manual watermark command"""
+    if message.reply_to_message and message.reply_to_message.photo:
+        try:
+            # Download photo
+            photo_path = await message.reply_to_message.download()
+            
+            # Add watermark
+            await add_watermark_to_image(photo_path, "@RknDeveloper")
+            
+            # Send back
+            await message.reply_photo(
+                photo=photo_path,
+                caption="✅ **Watermark Added Successfully!**\n\n📌 @RknDeveloper"
+            )
+            
+            # Clean up
+            os.remove(photo_path)
+            
+        except Exception as e:
+            await message.reply(f"❌ Error: {e}")
+    else:
+        await message.reply(
+            f"**📌 How to add watermark:**\n\n"
+            f"Reply to a photo with `/watermark` command.\n\n"
+            f"**Example:**\n"
+            f"`/watermark` (reply to a photo)\n\n"
+            f"✅ Watermark text: @RknDeveloper"
+        )
+
+print("✅ thumbnail_watermark.py loaded successfully!")
