@@ -4,7 +4,7 @@ from config import Rkn_Bots
 client = motor.motor_asyncio.AsyncIOMotorClient(Rkn_Bots.DB_URL)
 db = client[Rkn_Bots.DB_NAME]
 chnl_ids = db.chnl_ids
-users = db.users
+users = db.users  # ✅ Make sure users collection exists
 
 async def insert(user_id):
     user_det = {"_id": user_id}

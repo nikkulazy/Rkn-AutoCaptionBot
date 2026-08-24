@@ -4,10 +4,6 @@ from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
 from .database import insert
 
-# ✅ NORMAL BUTTON - NO STYLE
-def create_button(text, url=None):
-    return InlineKeyboardButton(text=text, url=url)
-
 async def not_subscribed(_, client, message):
     user_id = int(message.from_user.id)
     await insert(user_id)
@@ -26,12 +22,7 @@ async def not_subscribed(_, client, message):
 
 @Client.on_message(filters.private & filters.create(not_subscribed))
 async def forces_sub(client, message):
-    buttons = [[
-        create_button(
-            "📢 Join Update Channel 📢", 
-            url=f"https://t.me/{Config.FORCE_SUB}"
-        )
-    ]]
+    buttons = [[InlineKeyboardButton(text="📢 Join Update Channel 📢", url=f"https://t.me/{Config.FORCE_SUB}") ]]
     text = "**Sᴏʀʀy Dᴜᴅᴇ Yᴏᴜ'ʀᴇ Nᴏᴛ Jᴏɪɴᴇᴅ My Cʜᴀɴɴᴇʟ 😐. Sᴏ Pʟᴇᴀꜱᴇ Jᴏɪɴ Oᴜʀ Uᴩᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ Tᴏ Cᴄᴏɴᴛɪɴᴜᴇ**"
     try:
         user = await client.get_chat_member(Config.FORCE_SUB, message.from_user.id)    
@@ -40,3 +31,4 @@ async def forces_sub(client, message):
     except UserNotParticipant:                       
         return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
     return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
+          
