@@ -4,15 +4,35 @@ from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
 from .database import insert
 
-# ✅ Style Import
-try:
-    from pyrogrammod.types import KeyboardButtonStyle
-except:
-    class KeyboardButtonStyle:
-        def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-            self.bg_primary = bg_primary
-            self.bg_danger = bg_danger
-            self.bg_success = bg_success
+# ✅ Style Class - Pyrogram ke liye workaround
+class KeyboardButtonStyle:
+    def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+        self.bg_primary = bg_primary
+        self.bg_danger = bg_danger
+        self.bg_success = bg_success
+
+# ✅ Helper function - Style ke saath button banane ke liye
+def create_styled_button(text, url=None, callback_data=None, style_type="primary"):
+    """Create a styled button - Always Blue (Primary)"""
+    if style_type == "primary":
+        style = KeyboardButtonStyle(bg_primary=True)
+    elif style_type == "danger":
+        style = KeyboardButtonStyle(bg_danger=True)
+    elif style_type == "success":
+        style = KeyboardButtonStyle(bg_success=True)
+    else:
+        style = KeyboardButtonStyle(bg_primary=True)
+    
+    if callback_data:
+        btn = InlineKeyboardButton(text=text, callback_data=callback_data)
+    elif url:
+        btn = InlineKeyboardButton(text=text, url=url)
+    else:
+        btn = InlineKeyboardButton(text=text)
+    
+    # Style ko button mein store karo
+    btn._style = style
+    return btn
 
 async def not_subscribed(_, client, message):
     user_id = int(message.from_user.id)
@@ -33,10 +53,10 @@ async def not_subscribed(_, client, message):
 @Client.on_message(filters.private & filters.create(not_subscribed))
 async def forces_sub(client, message):
     buttons = [[
-        InlineKeyboardButton(
-            text="📢 Join Update Channel 📢", 
+        create_styled_button(
+            "📢 Join Update Channel 📢", 
             url=f"https://t.me/{Config.FORCE_SUB}",
-            style=KeyboardButtonStyle(bg_primary=True)  # 🔵 Blue
+            style_type="primary"
         )
     ]]
     text = "**Sᴏʀʀy Dᴜᴅᴇ Yᴏᴜ'ʀᴇ Nᴏᴛ Jᴏɪɴᴇᴅ My Cʜᴀɴɴᴇʟ 😐. Sᴏ Pʟᴇᴀꜱᴇ Jᴏɪɴ Oᴜʀ Uᴩᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ Tᴏ Cᴄᴏɴᴛɪɴᴜᴇ**"
