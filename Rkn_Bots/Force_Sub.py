@@ -1,19 +1,11 @@
 from pyrogram import Client, filters, enums 
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButtonStyle
 from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
 from .database import insert
 
-# ✅ Style Class - Pyrogram ke liye workaround
-class KeyboardButtonStyle:
-    def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
-        self.bg_primary = bg_primary
-        self.bg_danger = bg_danger
-        self.bg_success = bg_success
-
-# ✅ Helper function - Style ke saath button banane ke liye
+# ✅ Style se button banane ke liye helper
 def create_styled_button(text, url=None, callback_data=None, style_type="primary"):
-    """Create a styled button - Always Blue (Primary)"""
     if style_type == "primary":
         style = KeyboardButtonStyle(bg_primary=True)
     elif style_type == "danger":
@@ -24,15 +16,11 @@ def create_styled_button(text, url=None, callback_data=None, style_type="primary
         style = KeyboardButtonStyle(bg_primary=True)
     
     if callback_data:
-        btn = InlineKeyboardButton(text=text, callback_data=callback_data)
+        return InlineKeyboardButton(text=text, callback_data=callback_data, style=style)
     elif url:
-        btn = InlineKeyboardButton(text=text, url=url)
+        return InlineKeyboardButton(text=text, url=url, style=style)
     else:
-        btn = InlineKeyboardButton(text=text)
-    
-    # Style ko button mein store karo
-    btn._style = style
-    return btn
+        return InlineKeyboardButton(text=text, style=style)
 
 async def not_subscribed(_, client, message):
     user_id = int(message.from_user.id)
