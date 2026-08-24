@@ -1,8 +1,18 @@
 from pyrogram import Client, filters, enums 
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButtonStyle
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.errors import UserNotParticipant
 from config import Rkn_Bots as Config
 from .database import insert
+
+# ✅ Custom Style Class
+try:
+    from pyrogram.types import KeyboardButtonStyle
+except ImportError:
+    class KeyboardButtonStyle:
+        def __init__(self, bg_primary=False, bg_danger=False, bg_success=False):
+            self.bg_primary = bg_primary
+            self.bg_danger = bg_danger
+            self.bg_success = bg_success
 
 def create_styled_button(text, url=None, callback_data=None, style_type="primary"):
     if style_type == "primary":
