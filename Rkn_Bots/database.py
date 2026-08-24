@@ -1,6 +1,3 @@
-# database.py - Database Functions
-# (c) @RknDeveloperr
-
 import motor.motor_asyncio
 from config import Rkn_Bots
 
@@ -87,6 +84,8 @@ async def getChannelData(chnl_id):
 
 async def deleteButtons(chnl_id):
     await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
+
+# ============ RESET FUNCTIONS ============
 
 async def resetChannelData(chnl_id):
     await chnl_ids.delete_many({"chnl_id": chnl_id})
