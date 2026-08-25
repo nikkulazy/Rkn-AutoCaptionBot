@@ -5,7 +5,7 @@ from .database import total_user, getid, delete, insert, chnl_ids, users
 from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from .database import resetChannelData, resetUserData
-from .database import getWatermarkSettings, updateWatermarkText, updateWatermarkStatus
+from .database import getWatermarkSettings, updateWatermarkText, updateWatermarkStatus, removeWatermark
 from pyrogram.errors import FloodWait
 
 # ==================== ADD LOGGER IMPORT ====================
@@ -35,7 +35,6 @@ async def main_menu_buttons():
             types.InlineKeyboardButton("📎 Add Button", callback_data="add_button")
         ],
         [
-            types.InlineKeyboardButton("🖼️ Watermark", callback_data="watermark_menu"),
             types.InlineKeyboardButton("📊 Status", callback_data="status")
         ],
         [
@@ -48,21 +47,6 @@ async def main_menu_buttons():
 async def back_button_only():
     """Only back button"""
     buttons = types.InlineKeyboardMarkup([
-        [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
-    ])
-    return buttons
-
-async def watermark_menu_buttons():
-    """Watermark menu buttons"""
-    buttons = types.InlineKeyboardMarkup([
-        [
-            types.InlineKeyboardButton("✅ Enable", callback_data="wm_enable"),
-            types.InlineKeyboardButton("❌ Disable", callback_data="wm_disable")
-        ],
-        [
-            types.InlineKeyboardButton("📝 Set Text", callback_data="wm_set_text"),
-            types.InlineKeyboardButton("📊 Status", callback_data="wm_status")
-        ],
         [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
     ])
     return buttons
@@ -212,74 +196,6 @@ async def callback_handler(bot, callback_query):
         )
         await callback_query.answer()
     
-    elif data == "watermark_menu":
-        buttons = await watermark_menu_buttons()
-        await callback_query.message.reply_text(
-            f"**🖼️ Watermark Settings**\n\n"
-            f"**Position:** Center + Thoda Down\n"
-            f"**Text Color:** White\n"
-            f"**Background:** Black (80% opacity)\n"
-            f"**Only on Video Thumbnail**\n\n"
-            f"Use buttons below to manage watermark.",
-            reply_markup=buttons
-        )
-        await callback_query.answer()
-    
-    elif data == "wm_enable":
-        settings = await getWatermarkSettings(user_id)
-        if not settings.get("text"):
-            await callback_query.message.reply_text(
-                f"❌ **No watermark text set!**\n\n"
-                f"First set text using:\n"
-                f"`/watermark Your Text Here`"
-            )
-        else:
-            await updateWatermarkStatus(user_id, True)
-            await callback_query.message.reply_text(
-                f"✅ **Watermark Enabled!**\n\n"
-                f"📝 **Text:** `{settings['text']}`\n\n"
-                f"Now watermarks will be added to **video thumbnails** only."
-            )
-        await callback_query.answer()
-    
-    elif data == "wm_disable":
-        await updateWatermarkStatus(user_id, False)
-        await callback_query.message.reply_text(
-            f"✅ **Watermark Disabled!**\n\n"
-            f"Watermarks will no longer be added."
-        )
-        await callback_query.answer()
-    
-    elif data == "wm_set_text":
-        buttons = await back_button_only()
-        await callback_query.message.reply_text(
-            f"**📝 How to Set Watermark Text**\n\n"
-            f"Send this command in private chat:\n\n"
-            f"`/watermark Your Text Here`\n\n"
-            f"**📌 Example:**\n"
-            f"`/watermark @wolverine273`\n\n"
-            f"⚠️ After setting text, enable watermark using:\n"
-            f"`/watermark_on`",
-            reply_markup=buttons
-        )
-        await callback_query.answer()
-    
-    elif data == "wm_status":
-        settings = await getWatermarkSettings(user_id)
-        status = "✅ Enabled" if settings.get("enabled") else "❌ Disabled"
-        text = settings.get("text") or "Not set"
-        
-        await callback_query.message.reply_text(
-            f"**🖼️ Watermark Status**\n\n"
-            f"• **Status:** {status}\n"
-            f"• **Text:** `{text}`\n\n"
-            f"**Position:** Center + Down\n"
-            f"**Text Color:** White\n"
-            f"**Background:** Black\n"
-            f"**Applied on:** Video Thumbnail Only"
-        )
-        await callback_query.answer()
-    
     elif data == "status":
         chkData = await getChannelDataByUser(user_id)
         if not chkData:
@@ -413,7 +329,7 @@ async def auto_set_channel(bot, message):
         f"Now you can use:\n"
         f"• `/set_caption` - Set your caption\n"
         f"• `/set_buttons` - Set your buttons\n"
-        f"• `/watermark` - Set watermark text"
+        f"• `/set_watermark` - Set watermark text"
     )
     
     return channel_id
@@ -598,11 +514,10 @@ async def setButtons(bot, message):
 
 # ==================== WATERMARK COMMANDS ====================
 
-@Client.on_message(filters.command("watermark") & filters.private)
-async def watermark_cmd(bot, message):
-    """Setup watermark text"""
+@Client.on_message(filters.command("set_watermark") & filters.private)
+async def set_watermark_cmd(bot, message):
+    """Set watermark text"""
     user_id = message.from_user.id
-    first_name = message.from_user.first_name or "User"
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
@@ -618,17 +533,17 @@ async def watermark_cmd(bot, message):
     
     if len(message.command) < 2:
         return await message.reply_text(
-            f"**🖼️ Watermark Settings**\n\n"
+            f"**🖼️ Set Watermark**\n\n"
             f"**Position:** Center + Thoda Down\n"
             f"**Text Color:** White\n"
             f"**Background:** Black (80% opacity)\n"
             f"**Applied on:** Video Thumbnail Only\n\n"
-            f"**Usage:** `/watermark Your Text Here`\n\n"
-            f"**Example:** `/watermark @wolverine273`\n\n"
+            f"**Usage:** `/set_watermark Your Text Here`\n\n"
+            f"**Example:** `/set_watermark @wolverine273`\n\n"
             f"**Commands:**\n"
-            f"• `/watermark_on` - Enable watermark\n"
-            f"• `/watermark_off` - Disable watermark\n"
-            f"• `/watermark_status` - Check current status\n\n"
+            f"• `/set_watermark` - Set watermark text\n"
+            f"• `/remove_watermark` - Remove watermark\n"
+            f"• `/watermark_status` - Check watermark status\n\n"
             f"⚠️ Watermark will be added to **video thumbnails** only."
         )
     
@@ -644,12 +559,13 @@ async def watermark_cmd(bot, message):
         f"**Text Color:** White\n"
         f"**Background:** Black (80% opacity)\n"
         f"**Applied on:** Video Thumbnail Only\n\n"
-        f"Now watermarks will be added to **video thumbnails** only."
+        f"Now watermarks will be added to **video thumbnails**.\n\n"
+        f"To remove: `/remove_watermark`"
     )
 
-@Client.on_message(filters.command("watermark_on") & filters.private)
-async def watermark_on_cmd(bot, message):
-    """Enable watermark"""
+@Client.on_message(filters.command("remove_watermark") & filters.private)
+async def remove_watermark_cmd(bot, message):
+    """Remove watermark"""
     user_id = message.from_user.id
     
     chkData = await getChannelDataByUser(user_id)
@@ -662,36 +578,14 @@ async def watermark_on_cmd(bot, message):
         )
         return
     
-    settings = await getWatermarkSettings(user_id)
-    if not settings.get("text"):
-        return await message.reply_text(
-            f"❌ **No watermark text set!**\n\n"
-            f"First set text using:\n"
-            f"`/watermark Your Text Here`"
-        )
-    
-    await updateWatermarkStatus(user_id, True)
+    # Remove watermark from database
+    await removeWatermark(user_id)
     
     await message.reply_text(
-        f"✅ **Watermark Enabled!**\n\n"
-        f"📝 **Text:** `{settings['text']}`\n\n"
-        f"**Position:** Center + Thoda Down\n"
-        f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)\n"
-        f"**Applied on:** Video Thumbnail Only\n\n"
-        f"Now watermarks will be added to **video thumbnails** only."
-    )
-
-@Client.on_message(filters.command("watermark_off") & filters.private)
-async def watermark_off_cmd(bot, message):
-    """Disable watermark"""
-    user_id = message.from_user.id
-    
-    await updateWatermarkStatus(user_id, False)
-    
-    await message.reply_text(
-        f"✅ **Watermark Disabled!**\n\n"
-        f"Watermarks will no longer be added to video thumbnails."
+        f"✅ **Watermark Removed Successfully!**\n\n"
+        f"Watermark has been removed.\n"
+        f"No more watermarks will be added to video thumbnails.\n\n"
+        f"To set again: `/set_watermark Your Text`"
     )
 
 @Client.on_message(filters.command("watermark_status") & filters.private)
@@ -701,7 +595,7 @@ async def watermark_status_cmd(bot, message):
     
     settings = await getWatermarkSettings(user_id)
     
-    status = "✅ Enabled" if settings.get("enabled") else "❌ Disabled"
+    status = "✅ Enabled" if settings.get("enabled") else "❌ Disabled / Not Set"
     text = settings.get("text") or "Not set"
     
     await message.reply_text(
@@ -711,7 +605,10 @@ async def watermark_status_cmd(bot, message):
         f"**Position:** Center + Thoda Down\n"
         f"**Text Color:** White\n"
         f"**Background:** Black (80% opacity)\n"
-        f"**Applied on:** Video Thumbnail Only"
+        f"**Applied on:** Video Thumbnail Only\n\n"
+        f"**Commands:**\n"
+        f"• `/set_watermark` - Set watermark\n"
+        f"• `/remove_watermark` - Remove watermark"
     )
 
 # ==================== DELETE CAPTION COMMAND ====================
@@ -869,7 +766,7 @@ async def status_cmd(bot, message):
     
     # Get watermark status
     wm_settings = await getWatermarkSettings(user_id)
-    wm_status = "✅ Enabled" if wm_settings.get("enabled") else "❌ Disabled"
+    wm_status = "✅ Enabled" if wm_settings.get("enabled") else "❌ Disabled / Not Set"
     wm_text = wm_settings.get("text") or "Not set"
     
     await message.reply_text(
@@ -909,10 +806,9 @@ async def help_cmd(bot, message):
         f"❌ `/delcaption` - Delete caption\n"
         f"🗑️ `/remove_buttons` - Remove buttons\n\n"
         f"**📋 Commands (Private):**\n"
-        f"📊 `/status` - Check settings\n"
-        f"🖼️ `/watermark` - Set watermark text\n"
-        f"🖼️ `/watermark_on` - Enable watermark\n"
-        f"🖼️ `/watermark_off` - Disable watermark\n"
+        f"📊 `/status` - Check all settings\n"
+        f"🖼️ `/set_watermark` - Set watermark text\n"
+        f"🖼️ `/remove_watermark` - Remove watermark\n"
         f"🖼️ `/watermark_status` - Check watermark status\n"
         f"📢 `/help` - Show this help\n\n"
         f"**📌 Variables in Caption:**\n"
@@ -986,25 +882,33 @@ async def auto_edit_caption(bot, message):
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
                     
-                    # ===== WATERMARK CODE - SIRF VIDEO THUMBNAIL KE LIYE =====
-                    if file_type == "video":  # ✅ Sirf video ke liye
+                    # ===== WATERMARK CODE - SIRF VIDEO/DOCUMENT THUMBNAIL KE LIYE =====
+                    if file_type in ["video", "document"]:
                         try:
-                            user_data = await chnl_ids.find_one({"chnl_id": chnl_id})
-                            user_id = user_data.get("user_id") if user_data else None
+                            # Check if document is a video file
+                            is_video_file = False
+                            if file_name:
+                                video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.3gp', '.ts']
+                                if any(file_name.lower().endswith(ext) for ext in video_extensions):
+                                    is_video_file = True
                             
-                            if user_id:
-                                settings = await getWatermarkSettings(user_id)
-                                if settings.get("enabled"):
-                                    watermark_text = settings.get("text")
-                                    if watermark_text:
-                                        thumb_wm = await get_watermark_instance(bot)
-                                        
-                                        # ✅ Sirf thumbnail process hoga
-                                        thumb_path = await thumb_wm.process_thumbnail(message, watermark_text)
-                                        if thumb_path:
-                                            # ✅ Sirf thumbnail replace hoga
-                                            await thumb_wm.replace_thumbnail(message, thumb_path)
-                                            print(f"✅ Watermark added to video thumbnail in channel: {chnl_id}")
+                            if file_type == "video" or is_video_file:
+                                user_data = await chnl_ids.find_one({"chnl_id": chnl_id})
+                                user_id = user_data.get("user_id") if user_data else None
+                                
+                                if user_id:
+                                    settings = await getWatermarkSettings(user_id)
+                                    if settings.get("enabled"):
+                                        watermark_text = settings.get("text")
+                                        if watermark_text:
+                                            thumb_wm = await get_watermark_instance(bot)
+                                            
+                                            # ✅ Sirf thumbnail process hoga
+                                            thumb_path = await thumb_wm.process_thumbnail(message, watermark_text)
+                                            if thumb_path:
+                                                # ✅ Sirf thumbnail replace hoga
+                                                await thumb_wm.replace_thumbnail(message, thumb_path)
+                                                print(f"✅ Watermark added to thumbnail: {file_name_clean}")
                         except Exception as e:
                             print(f"⚠️ Watermark error: {e}")
                             import traceback
