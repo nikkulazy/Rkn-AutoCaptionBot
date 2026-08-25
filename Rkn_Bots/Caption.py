@@ -537,6 +537,7 @@ async def setButtons(bot, message):
 async def set_watermark_cmd(bot, message):
     """Set watermark text - Any user can use this"""
     user_id = message.from_user.id
+    print(f"✅ /set_watermark command triggered by user: {user_id}")
     
     # ✅ Check if user has channel connected
     chkData = await getChannelDataByUser(user_id)
@@ -592,6 +593,7 @@ async def set_watermark_cmd(bot, message):
 async def remove_watermark_cmd(bot, message):
     """Remove watermark - Any user can use this"""
     user_id = message.from_user.id
+    print(f"✅ /remove_watermark command triggered by user: {user_id}")
     
     chkData = await getChannelDataByUser(user_id)
     if not chkData:
@@ -611,6 +613,32 @@ async def remove_watermark_cmd(bot, message):
         f"Watermark has been removed.\n"
         f"No more watermarks will be added to video thumbnails.\n\n"
         f"To set again: `/set_watermark Your Text`"
+    )
+
+@Client.on_message(filters.command("watermark_status") & filters.private)
+async def watermark_status_cmd(bot, message):
+    """Check watermark status - Any user can use this"""
+    user_id = message.from_user.id
+    print(f"✅ /watermark_status command triggered by user: {user_id}")
+    
+    settings = await getWatermarkSettings(user_id)
+    channel_id = await getChannelIdByUser(user_id)
+    
+    status = "✅ Enabled" if settings.get("enabled") else "❌ Disabled / Not Set"
+    text = settings.get("text") or "Not set"
+    
+    await message.reply_text(
+        f"**🖼️ Watermark Status**\n\n"
+        f"• **Status:** {status}\n"
+        f"• **Text:** `{text}`\n"
+        f"• **Channel ID:** `{channel_id or 'Not connected'}`\n\n"
+        f"**Position:** Center + Thoda Down\n"
+        f"**Text Color:** White\n"
+        f"**Background:** Black (80% opacity)\n"
+        f"**Applied on:** Video Thumbnail Only\n\n"
+        f"**Commands:**\n"
+        f"• `/set_watermark` - Set watermark\n"
+        f"• `/remove_watermark` - Remove watermark"
     )
 
 @Client.on_message(filters.command("watermark_status") & filters.private)
