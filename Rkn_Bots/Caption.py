@@ -23,6 +23,10 @@ except:
 
 print("🔄 Loading Caption.py...")
 
+# ✅ DUPLICATE MESSAGE TRACKING
+processed_messages = set()
+processed_messages_max = 1000
+
 async def main_menu_buttons():
     buttons = types.InlineKeyboardMarkup([
         [
@@ -722,10 +726,24 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ✅ AUTO EDIT CAPTION WITH WATERMARK - FLOODWAIT FIXED
+# ✅ AUTO EDIT CAPTION WITH WATERMARK - DUPLICATE FIXED
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
+    global processed_messages
+    
     chnl_id = message.chat.id
+    
+    # ✅ DUPLICATE CHECK - Skip if already processed
+    msg_key = f"{chnl_id}_{message.id}"
+    if msg_key in processed_messages:
+        print(f"⏭️ Skipping duplicate message: {msg_key}")
+        return
+    
+    # ✅ Add to processed set
+    processed_messages.add(msg_key)
+    if len(processed_messages) > processed_messages_max:
+        processed_messages.clear()
+    
     print(f"📩 New message in channel: {chnl_id}")
     
     channel_title = None
@@ -794,7 +812,7 @@ async def auto_edit_caption(bot, message):
                 print(f"❌ Watermark module error: {e}")
         
         try:
-            # Log to channel
+            # ✅ LOG TO CHANNEL - ONLY ONCE
             try:
                 logger = Logger(bot)
                 await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
@@ -837,7 +855,6 @@ async def auto_edit_caption(bot, message):
                     print(f"❌ Thumbnail replace error: {e}")
                     
         except FloodWait as e:
-            # ✅ FIXED: e.value use karein, e.x nahi
             wait_time = e.value if hasattr(e, 'value') else 5
             print(f"⏳ FloodWait: {wait_time} seconds")
             await asyncio.sleep(wait_time)
