@@ -10,6 +10,16 @@ from pyrogram.errors import FloodWait
 # ==================== ADD LOGGER IMPORT ====================
 from .logger import Logger
 
+# ✅ WATERMARK IMPORT - FIXED with try/except to avoid crashes
+try:
+    from .thumbnail_watermark import ThumbnailWatermark
+    from pyrogram.types import InputMediaPhoto
+    WATERMARK_AVAILABLE = True
+    print("✅ Watermark module loaded successfully!")
+except Exception as e:
+    print(f"⚠️ Watermark module not available: {e}")
+    WATERMARK_AVAILABLE = False
+
 print("🔄 Loading Caption.py...")
 
 # ==================== MAIN MENU BUTTONS ====================
@@ -182,11 +192,12 @@ async def callback_handler(bot, callback_query):
         )
         await callback_query.answer()
 
-# ==================== CHECK CHANNEL OWNER/ADMIN ====================
+# ==================== CHECK CHANNEL OWNER/ADMIN - FIXED ====================
 
 async def get_channel_owner_or_admin(bot, channel_id):
     """Get the owner or admin of a channel"""
     try:
+        # ✅ FIXED: No 'await' before get_chat_members
         admins = bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
         async for admin in admins:
             if admin.user and not admin.user.is_bot:
@@ -781,7 +792,7 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ==================== AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
+# ==================== AUTO EDIT CAPTION + WATERMARK + FORWARD TO LOG CHANNEL ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
@@ -833,7 +844,35 @@ async def auto_edit_caption(bot, message):
                 
                 print(f"📁 File: {file_name_clean}")
                 
+                # ========== ✅ WATERMARK APPLY FOR VIDEOS (with error handling) ==========
+                watermarked_thumb = None
+                if file_type == "video" and WATERMARK_AVAILABLE:
+                    try:
+                        # Get watermark from database
+                        channel_data = await chnl_ids.find_one({"chnl_id": chnl_id})
+                        watermark_text = channel_data.get("watermark") if channel_data else None
+                        
+                        if watermark_text:
+                            print(f"🖼️ Applying watermark: {watermark_text}")
+                            try:
+                                thumb_wm = ThumbnailWatermark(bot)
+                                watermarked_thumb = await thumb_wm.process_thumbnail(message, watermark_text)
+                                if watermarked_thumb and os.path.exists(watermarked_thumb):
+                                    print(f"✅ Watermark applied to thumbnail: {watermarked_thumb}")
+                                else:
+                                    print("❌ Watermark apply failed - no file created")
+                                    watermarked_thumb = None
+                            except Exception as e:
+                                print(f"❌ Watermark process error: {e}")
+                                watermarked_thumb = None
+                        else:
+                            print("ℹ️ No watermark set for this channel")
+                    except Exception as e:
+                        print(f"❌ Watermark module error: {e}")
+                        watermarked_thumb = None
+                
                 try:
+                    # Log to channel
                     try:
                         logger = Logger(bot)
                         await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
@@ -850,6 +889,7 @@ async def auto_edit_caption(bot, message):
                             replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name_clean)
                         print(f"📝 New caption: {replaced_caption}")
                         
+                        # Edit caption with/without buttons
                         if buttons and len(buttons) > 0:
                             print(f"🔘 Applying {len(buttons)} button(s)")
                             reply_markup = types.InlineKeyboardMarkup(buttons)
@@ -859,6 +899,25 @@ async def auto_edit_caption(bot, message):
                             print("ℹ️ No buttons to apply, editing caption only")
                             await message.edit(replaced_caption)
                             print("✅ Caption edited successfully!")
+                        
+                        # ========== ✅ REPLACE THUMBNAIL WITH WATERMARK ==========
+                        if watermarked_thumb and os.path.exists(watermarked_thumb) and WATERMARK_AVAILABLE:
+                            try:
+                                await message.edit_media(
+                                    InputMediaPhoto(
+                                        media=watermarked_thumb,
+                                        caption=message.caption or replaced_caption
+                                    )
+                                )
+                                print("✅ Thumbnail replaced with watermarked version!")
+                                # Cleanup
+                                try:
+                                    os.remove(watermarked_thumb)
+                                    print(f"🗑️ Cleaned up: {watermarked_thumb}")
+                                except Exception as e:
+                                    print(f"⚠️ Cleanup error: {e}")
+                            except Exception as e:
+                                print(f"❌ Thumbnail replace error: {e}")
                     else:
                         print("ℹ️ No caption data found, only forwarding file")
                         
