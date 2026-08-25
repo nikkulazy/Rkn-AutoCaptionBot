@@ -218,7 +218,8 @@ async def callback_handler(bot, callback_query):
             f"**🖼️ Watermark Settings**\n\n"
             f"**Position:** Center + Thoda Down\n"
             f"**Text Color:** White\n"
-            f"**Background:** Black (80% opacity)\n\n"
+            f"**Background:** Black (80% opacity)\n"
+            f"**Only on Video Thumbnail**\n\n"
             f"Use buttons below to manage watermark.",
             reply_markup=buttons
         )
@@ -237,7 +238,7 @@ async def callback_handler(bot, callback_query):
             await callback_query.message.reply_text(
                 f"✅ **Watermark Enabled!**\n\n"
                 f"📝 **Text:** `{settings['text']}`\n\n"
-                f"Now watermarks will be added to video thumbnails."
+                f"Now watermarks will be added to **video thumbnails** only."
             )
         await callback_query.answer()
     
@@ -274,7 +275,8 @@ async def callback_handler(bot, callback_query):
             f"• **Text:** `{text}`\n\n"
             f"**Position:** Center + Down\n"
             f"**Text Color:** White\n"
-            f"**Background:** Black"
+            f"**Background:** Black\n"
+            f"**Applied on:** Video Thumbnail Only"
         )
         await callback_query.answer()
     
@@ -304,7 +306,8 @@ async def callback_handler(bot, callback_query):
                 f"🔹 **Buttons:** ({btn_count})\n"
                 f"{'✅ Set' if btn_count > 0 else '❌ Not set'}\n\n"
                 f"🔹 **Watermark:** {wm_status}\n"
-                f"📝 **Text:** `{wm_text}`"
+                f"📝 **Text:** `{wm_text}`\n"
+                f"📌 **Applied on:** Video Thumbnail Only"
             )
         await callback_query.answer()
 
@@ -343,32 +346,49 @@ async def auto_set_channel(bot, message):
     
     user_id = None
     
-    if message.reply_to_message and message.reply_to_message.from_user:
-        user_id = message.reply_to_message.from_user.id
+    try:
+        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            if admin.user and not admin.user.is_bot:
+                user_id = admin.user.id
+                print(f"👤 Found admin: {user_id}")
+                break
+    except Exception as e:
+        print(f"⚠️ Could not get admins: {e}")
     
-    if not user_id:
-        owner_id = await get_channel_owner_or_admin(bot, channel_id)
-        if owner_id:
-            user_id = owner_id
-            print(f"👤 Found channel owner/admin: {user_id}")
+    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
+        print(f"👤 Found from reply: {user_id}")
+    
+    if not user_id and message.from_user:
+        user_id = message.from_user.id
+        print(f"👤 Found from sender: {user_id}")
     
     if not user_id:
         user_id = channel_id
         print(f"⚠️ Using channel ID as user ID: {user_id}")
     
     print(f"👤 Final User ID: {user_id}")
+    print(f"📢 Channel ID: {channel_id}")
     
     chkData = await getChannelDataByUser(user_id)
     
     if chkData and chkData.get("chnl_id") == channel_id:
+        print(f"✅ Channel already set for user {user_id}")
         return channel_id
     
     if chkData:
         await chnl_ids.delete_many({"user_id": user_id})
         await chnl_ids.delete_many({"chnl_id": chkData.get("chnl_id")})
+        print(f"🗑️ Deleted old data for user: {user_id}")
     
-    await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
-    await addCap(channel_id, Rkn_Bots.DEF_CAP)
+    try:
+        await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+        await addCap(channel_id, Rkn_Bots.DEF_CAP)
+        print(f"✅ Saved channel {channel_id} for user {user_id}")
+    except Exception as e:
+        print(f"❌ Database save error: {e}")
+        await message.reply_text(f"❌ Database error: {e}")
+        return None
     
     channel_title = None
     try:
@@ -388,7 +408,8 @@ async def auto_set_channel(bot, message):
     await message.reply_text(
         f"✅ **Channel Set Successfully!**\n\n"
         f"**Channel ID:** `{channel_id}`\n"
-        f"**Channel Name:** {channel_title or 'Unknown'}\n\n"
+        f"**Channel Name:** {channel_title or 'Unknown'}\n"
+        f"**User ID:** `{user_id}`\n\n"
         f"Now you can use:\n"
         f"• `/set_caption` - Set your caption\n"
         f"• `/set_buttons` - Set your buttons\n"
@@ -600,14 +621,15 @@ async def watermark_cmd(bot, message):
             f"**🖼️ Watermark Settings**\n\n"
             f"**Position:** Center + Thoda Down\n"
             f"**Text Color:** White\n"
-            f"**Background:** Black (80% opacity)\n\n"
+            f"**Background:** Black (80% opacity)\n"
+            f"**Applied on:** Video Thumbnail Only\n\n"
             f"**Usage:** `/watermark Your Text Here`\n\n"
             f"**Example:** `/watermark @wolverine273`\n\n"
             f"**Commands:**\n"
             f"• `/watermark_on` - Enable watermark\n"
             f"• `/watermark_off` - Disable watermark\n"
             f"• `/watermark_status` - Check current status\n\n"
-            f"⚠️ Watermark will be added to video thumbnails only."
+            f"⚠️ Watermark will be added to **video thumbnails** only."
         )
     
     text = message.text.split(" ", 1)[1]
@@ -620,8 +642,9 @@ async def watermark_cmd(bot, message):
         f"📝 **Text:** `{text}`\n\n"
         f"**Position:** Center + Thoda Down\n"
         f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)\n\n"
-        f"Now watermarks will be added to video thumbnails."
+        f"**Background:** Black (80% opacity)\n"
+        f"**Applied on:** Video Thumbnail Only\n\n"
+        f"Now watermarks will be added to **video thumbnails** only."
     )
 
 @Client.on_message(filters.command("watermark_on") & filters.private)
@@ -654,8 +677,9 @@ async def watermark_on_cmd(bot, message):
         f"📝 **Text:** `{settings['text']}`\n\n"
         f"**Position:** Center + Thoda Down\n"
         f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)\n\n"
-        f"Now watermarks will be added to video thumbnails."
+        f"**Background:** Black (80% opacity)\n"
+        f"**Applied on:** Video Thumbnail Only\n\n"
+        f"Now watermarks will be added to **video thumbnails** only."
     )
 
 @Client.on_message(filters.command("watermark_off") & filters.private)
@@ -686,7 +710,8 @@ async def watermark_status_cmd(bot, message):
         f"• **Text:** `{text}`\n\n"
         f"**Position:** Center + Thoda Down\n"
         f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)"
+        f"**Background:** Black (80% opacity)\n"
+        f"**Applied on:** Video Thumbnail Only"
     )
 
 # ==================== DELETE CAPTION COMMAND ====================
@@ -854,7 +879,8 @@ async def status_cmd(bot, message):
         f"🔹 **Buttons:** ({btn_count})\n"
         f"{'✅ Set' if btn_count > 0 else '❌ Not set'}\n\n"
         f"🔹 **Watermark:** {wm_status}\n"
-        f"📝 **Text:** `{wm_text}`"
+        f"📝 **Text:** `{wm_text}`\n"
+        f"📌 **Applied on:** Video Thumbnail Only"
     )
 
 # ==================== HELP COMMAND ====================
@@ -896,7 +922,8 @@ async def help_cmd(bot, message):
         f"**📌 Watermark Settings:**\n"
         f"• **Position:** Center + Thoda Down\n"
         f"• **Text Color:** White\n"
-        f"• **Background:** Black (80% opacity)",
+        f"• **Background:** Black (80% opacity)\n"
+        f"• **Applied on:** Video Thumbnail Only",
         reply_markup=buttons
     )
 
@@ -959,10 +986,9 @@ async def auto_edit_caption(bot, message):
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
                     
-                    # ===== WATERMARK CODE - ADD THIS =====
-                    if file_type in ["video"]:
+                    # ===== WATERMARK CODE - SIRF VIDEO THUMBNAIL KE LIYE =====
+                    if file_type == "video":  # ✅ Sirf video ke liye
                         try:
-                            # Get user_id from channel data
                             user_data = await chnl_ids.find_one({"chnl_id": chnl_id})
                             user_id = user_data.get("user_id") if user_data else None
                             
@@ -971,14 +997,14 @@ async def auto_edit_caption(bot, message):
                                 if settings.get("enabled"):
                                     watermark_text = settings.get("text")
                                     if watermark_text:
-                                        # Initialize watermark
                                         thumb_wm = await get_watermark_instance(bot)
                                         
-                                        # Process thumbnail
+                                        # ✅ Sirf thumbnail process hoga
                                         thumb_path = await thumb_wm.process_thumbnail(message, watermark_text)
                                         if thumb_path:
+                                            # ✅ Sirf thumbnail replace hoga
                                             await thumb_wm.replace_thumbnail(message, thumb_path)
-                                            print(f"✅ Watermark added to video in channel: {chnl_id}")
+                                            print(f"✅ Watermark added to video thumbnail in channel: {chnl_id}")
                         except Exception as e:
                             print(f"⚠️ Watermark error: {e}")
                             import traceback
