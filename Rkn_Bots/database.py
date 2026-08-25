@@ -62,6 +62,7 @@ async def addCap(chnl_id, caption, buttons=None):
     if buttons:
         dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
+    print(f"✅ Inserted: channel={chnl_id}")
 
 async def updateCap(chnl_id, caption, buttons=None):
     update_data = {"caption": caption}
@@ -104,7 +105,7 @@ async def updateWatermarkText(user_id, text):
     """Update watermark text"""
     await chnl_ids.update_one(
         {"user_id": user_id},
-        {"$set": {"watermark_text": text}}
+        {"$set": {"watermark_text": text, "watermark_enabled": True}}
     )
 
 async def updateWatermarkStatus(user_id, enabled):
