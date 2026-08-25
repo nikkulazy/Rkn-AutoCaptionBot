@@ -31,6 +31,7 @@ async def addCapByUser(user_id, chnl_id, caption, buttons=None):
     if buttons:
         dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
+    print(f"✅ Inserted: user={user_id}, channel={chnl_id}")
 
 async def updateCapByUser(user_id, caption):
     await chnl_ids.update_one({"user_id": user_id}, {"$set": {"caption": caption}})
@@ -48,6 +49,7 @@ async def deleteButtonsByUser(user_id):
 
 async def getChannelDataByUser(user_id):
     data = await chnl_ids.find_one({"user_id": user_id})
+    print(f"📊 getChannelDataByUser({user_id}): {data}")
     if data and "buttons" in data and data["buttons"]:
         from pyrogram.types import InlineKeyboardButton
         data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
@@ -77,6 +79,7 @@ async def updateButtons(chnl_id, buttons):
 
 async def getChannelData(chnl_id):
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
+    print(f"📊 getChannelData({chnl_id}): {data}")
     if data and "buttons" in data and data["buttons"]:
         from pyrogram.types import InlineKeyboardButton
         data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
