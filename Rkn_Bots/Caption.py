@@ -8,7 +8,7 @@ from .database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
 from .logger import Logger
 
-# ✅ WATERMARK IMPORT - FIXED
+# ✅ WATERMARK IMPORT
 try:
     from .thumbnail_watermark import ThumbnailWatermark
     from pyrogram.types import InputMediaPhoto
@@ -722,7 +722,7 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ✅ AUTO EDIT CAPTION WITH WATERMARK
+# ✅ AUTO EDIT CAPTION WITH WATERMARK - FLOODWAIT FIXED
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
@@ -770,7 +770,7 @@ async def auto_edit_caption(bot, message):
         
         print(f"📁 File: {file_name_clean}")
         
-        # ✅ WATERMARK APPLY - SIRF VIDEOS KE LIYE
+        # ✅ WATERMARK APPLY - ONLY FOR VIDEOS
         watermarked_thumb = None
         if file_type == "video" and WATERMARK_AVAILABLE:
             try:
@@ -837,9 +837,10 @@ async def auto_edit_caption(bot, message):
                     print(f"❌ Thumbnail replace error: {e}")
                     
         except FloodWait as e:
-    wait_time = e.value if hasattr(e, 'value') else 5
-    print(f"⏳ FloodWait: {wait_time} seconds")
-    await asyncio.sleep(wait_time)
+            # ✅ FIXED: e.value use karein, e.x nahi
+            wait_time = e.value if hasattr(e, 'value') else 5
+            print(f"⏳ FloodWait: {wait_time} seconds")
+            await asyncio.sleep(wait_time)
         except Exception as e:
             if "MESSAGE_NOT_MODIFIED" in str(e):
                 print("ℹ️ Message already has same content")
@@ -899,7 +900,8 @@ async def broadcast(bot, message):
             try:
                 await rkn.edit(f"<u>ʙʀᴏᴀᴅᴄᴀsᴛ ᴘʀᴏᴄᴇssɪɴɢ</u>\n\n• ᴛᴏᴛᴀʟ ᴜsᴇʀs: {tot}\n• sᴜᴄᴄᴇssғᴜʟ: {success}\n• ʙʟᴏᴄᴋᴇᴅ ᴜsᴇʀs: {blocked}\n• ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛs: {deactivated}\n• ᴜɴsᴜᴄᴄᴇssғᴜʟ: {failed}")
             except FloodWait as e:
-                await asyncio.sleep(e.x)
+                wait_time = e.value if hasattr(e, 'value') else 5
+                await asyncio.sleep(wait_time)
         
         if logger:
             try:
