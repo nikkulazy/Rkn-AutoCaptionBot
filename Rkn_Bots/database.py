@@ -107,6 +107,7 @@ async def updateWatermarkText(user_id, text):
         {"user_id": user_id},
         {"$set": {"watermark_text": text, "watermark_enabled": True}}
     )
+    print(f"✅ Watermark text updated for user {user_id}: {text}")
 
 async def updateWatermarkStatus(user_id, enabled):
     """Enable/disable watermark"""
@@ -114,6 +115,7 @@ async def updateWatermarkStatus(user_id, enabled):
         {"user_id": user_id},
         {"$set": {"watermark_enabled": enabled}}
     )
+    print(f"✅ Watermark status updated for user {user_id}: {enabled}")
 
 async def removeWatermark(user_id):
     """Remove watermark completely"""
@@ -122,6 +124,13 @@ async def removeWatermark(user_id):
         {"$unset": {"watermark_text": "", "watermark_enabled": ""}}
     )
     print(f"✅ Watermark removed for user: {user_id}")
+
+async def getChannelIdByUser(user_id):
+    """Get channel ID for a user"""
+    data = await chnl_ids.find_one({"user_id": user_id})
+    if data:
+        return data.get("chnl_id")
+    return None
 
 # ============ RESET FUNCTIONS ============
 
