@@ -837,8 +837,9 @@ async def auto_edit_caption(bot, message):
                     print(f"❌ Thumbnail replace error: {e}")
                     
         except FloodWait as e:
-            print(f"⏳ FloodWait: {e.x} seconds")
-            await asyncio.sleep(e.x)
+    wait_time = e.value if hasattr(e, 'value') else 5
+    print(f"⏳ FloodWait: {wait_time} seconds")
+    await asyncio.sleep(wait_time)
         except Exception as e:
             if "MESSAGE_NOT_MODIFIED" in str(e):
                 print("ℹ️ Message already has same content")
