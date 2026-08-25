@@ -588,6 +588,118 @@ async def removeButtons(bot, message):
         f"Now no buttons will be shown with captions."
     )
 
+# ==================== WATERMARK COMMANDS ====================
+
+@Client.on_message(filters.command("set_watermark") & (filters.channel | filters.private))
+async def set_watermark(bot, message):
+    """Set watermark text for thumbnails"""
+    if message.chat.type == enums.ChatType.PRIVATE:
+        buttons = await back_button_only()
+        await message.reply_text(
+            f"❌ **Please use this command in your channel!**\n\n"
+            f"Go to your channel and send:\n"
+            f"`/set_watermark Your Text Here`\n\n"
+            f"**Example:**\n"
+            f"`/set_watermark @YourChannel`\n\n"
+            f"⚠️ This will add watermark to video thumbnails automatically.",
+            reply_markup=buttons
+        )
+        return
+    
+    try:
+        await message.delete()
+    except:
+        pass
+    
+    channel_id = await auto_set_channel(bot, message)
+    if channel_id is None:
+        return
+    
+    user_id = None
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+    if not user_id:
+        user_id = channel_id
+    
+    if len(message.command) < 2:
+        await message.reply_text(
+            f"❌ **Please provide watermark text!**\n\n"
+            f"**Usage:** `/set_watermark Your Text`\n"
+            f"**Example:** `/set_watermark @YourChannel`\n\n"
+            f"🖼️ This text will appear on video thumbnails."
+        )
+        return
+    
+    watermark_text = message.text.split(" ", 1)[1]
+    
+    await chnl_ids.update_one(
+        {"user_id": user_id}, 
+        {"$set": {"watermark": watermark_text}},
+        upsert=True
+    )
+    await chnl_ids.update_one(
+        {"chnl_id": channel_id}, 
+        {"$set": {"watermark": watermark_text}},
+        upsert=True
+    )
+    
+    await message.reply_text(
+        f"✅ **Watermark Set Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n"
+        f"**Watermark Text:** `{watermark_text}`\n\n"
+        f"🖼️ Now all video thumbnails will have this watermark."
+    )
+
+@Client.on_message(filters.command("remove_watermark") & (filters.channel | filters.private))
+async def remove_watermark(bot, message):
+    """Remove watermark from thumbnails"""
+    if message.chat.type == enums.ChatType.PRIVATE:
+        buttons = await back_button_only()
+        await message.reply_text(
+            f"❌ **Please use this command in your channel!**\n\n"
+            f"Go to your channel and send `/remove_watermark`",
+            reply_markup=buttons
+        )
+        return
+    
+    try:
+        await message.delete()
+    except:
+        pass
+    
+    channel_id = await auto_set_channel(bot, message)
+    if channel_id is None:
+        return
+    
+    user_id = None
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+    if not user_id:
+        user_id = channel_id
+    
+    await chnl_ids.update_one(
+        {"user_id": user_id}, 
+        {"$unset": {"watermark": ""}}
+    )
+    await chnl_ids.update_one(
+        {"chnl_id": channel_id}, 
+        {"$unset": {"watermark": ""}}
+    )
+    
+    await message.reply_text(
+        f"✅ **Watermark Removed Successfully!**\n\n"
+        f"**Channel ID:** `{channel_id}`\n"
+        f"Now thumbnails will appear without watermark."
+    )
+
 # ==================== STATUS COMMAND ====================
 
 @Client.on_message(filters.private & filters.command("status"))
@@ -618,6 +730,7 @@ async def status_cmd(bot, message):
     
     caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
     buttons_data = channel_data.get("buttons", []) if channel_data else []
+    watermark = channel_data.get("watermark", "Not set") if channel_data else "Not set"
     
     btn_count = len(buttons_data)
     btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
@@ -626,7 +739,8 @@ async def status_cmd(bot, message):
         f"**📊 Your Settings**\n\n"
         f"🔹 **Channel ID:** `{chnl_id}`\n\n"
         f"🔹 **Caption:**\n`{caption}`\n\n"
-        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}"
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}\n\n"
+        f"🔹 **Watermark:** `{watermark}`"
     )
 
 # ==================== HELP COMMAND ====================
@@ -648,12 +762,15 @@ async def help_cmd(bot, message):
         f"1️⃣ Add me as admin in your channel\n"
         f"2️⃣ Go to your channel\n"
         f"3️⃣ Send `/set_caption Your caption {{file_name}}`\n"
-        f"4️⃣ Send `/set_buttons Text:URL | Text:URL`\n\n"
+        f"4️⃣ Send `/set_buttons Text:URL | Text:URL`\n"
+        f"5️⃣ Send `/set_watermark Your Text` for video thumbnails\n\n"
         f"**📋 Commands (Send in your channel):**\n"
         f"📝 `/set_caption` - Set caption\n"
         f"📎 `/set_buttons` - Set buttons\n"
+        f"🖼️ `/set_watermark` - Set watermark on thumbnails\n"
         f"❌ `/delcaption` - Delete caption\n"
-        f"🗑️ `/remove_buttons` - Remove buttons\n\n"
+        f"🗑️ `/remove_buttons` - Remove buttons\n"
+        f"🗑️ `/remove_watermark` - Remove watermark\n\n"
         f"**📋 Commands (Private):**\n"
         f"📊 `/status` - Check settings\n"
         f"📢 `/help` - Show this help\n\n"
