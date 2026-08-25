@@ -212,7 +212,7 @@ async def callback_handler(bot, callback_query):
             
             # Get watermark status
             wm_settings = await getWatermarkSettings(user_id)
-            wm_status = "✅ Enabled" if wm_settings.get("enabled") else "❌ Disabled"
+            wm_status = "✅ Enabled" if wm_settings.get("enabled") else "❌ Disabled / Not Set"
             wm_text = wm_settings.get("text") or "Not set"
             
             await callback_query.message.reply_text(
@@ -232,8 +232,12 @@ async def callback_handler(bot, callback_query):
 async def get_channel_owner_or_admin(bot, channel_id):
     """Get the owner or admin of a channel"""
     try:
-        admins = await bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
-        async for admin in admins:
+        # ✅ FIXED: Proper async iteration
+        admins = []
+        async for member in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            admins.append(member)
+        
+        for admin in admins:
             if admin.user and not admin.user.is_bot:
                 return admin.user.id
     except Exception as e:
@@ -244,7 +248,7 @@ async def get_channel_owner_or_admin(bot, channel_id):
 # ==================== AUTO SET CHANNEL WITH OWNER DETECTION ====================
 
 async def auto_set_channel(bot, message):
-    """Auto set channel when user sends command in channel - detects channel owner/admin"""
+    """Auto set channel when user sends command in channel"""
     channel_id = message.chat.id
     
     is_admin = await check_bot_admin(bot, channel_id)
@@ -252,28 +256,26 @@ async def auto_set_channel(bot, message):
     if not is_admin:
         await message.reply_text(
             f"❌ **I'm not admin in this channel!**\n\n"
-            f"Please add me as admin in this channel first.\n\n"
-            f"**How to add:**\n"
-            f"1. Open channel settings\n"
-            f"2. Go to Administrators\n"
-            f"3. Add this bot as admin"
+            f"Please add me as admin in this channel first."
         )
         return None
     
+    # ✅ Get user ID from channel admins
     user_id = None
     
     try:
+        # ✅ FIXED: Proper async iteration
+        admins = []
         async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            admins.append(admin)
+        
+        for admin in admins:
             if admin.user and not admin.user.is_bot:
                 user_id = admin.user.id
                 print(f"👤 Found admin: {user_id}")
                 break
     except Exception as e:
         print(f"⚠️ Could not get admins: {e}")
-    
-    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
-        user_id = message.reply_to_message.from_user.id
-        print(f"👤 Found from reply: {user_id}")
     
     if not user_id and message.from_user:
         user_id = message.from_user.id
@@ -286,20 +288,42 @@ async def auto_set_channel(bot, message):
     print(f"👤 Final User ID: {user_id}")
     print(f"📢 Channel ID: {channel_id}")
     
-    chkData = await getChannelDataByUser(user_id)
-    
-    if chkData and chkData.get("chnl_id") == channel_id:
-        print(f"✅ Channel already set for user {user_id}")
-        return channel_id
+    # ✅ Check if channel already exists
+    chkData = await getChannelData(channel_id)
     
     if chkData:
+        # ✅ Agar channel hai but user_id nahi hai toh fix karein
+        if not chkData.get("user_id"):
+            await chnl_ids.update_one(
+                {"chnl_id": channel_id},
+                {"$set": {"user_id": user_id}}
+            )
+            print(f"✅ Fixed: Added user_id {user_id} to channel {channel_id}")
+        
+        # ✅ Agar user_id match karta hai toh return
+        if chkData.get("user_id") == user_id:
+            print(f"✅ Channel already set for user {user_id}")
+            return channel_id
+    
+    # ✅ Delete old user data if exists
+    old_user_data = await getChannelDataByUser(user_id)
+    if old_user_data:
         await chnl_ids.delete_many({"user_id": user_id})
-        await chnl_ids.delete_many({"chnl_id": chkData.get("chnl_id")})
         print(f"🗑️ Deleted old data for user: {user_id}")
     
+    # ✅ Delete old channel data if exists
+    if chkData:
+        await chnl_ids.delete_many({"chnl_id": channel_id})
+        print(f"🗑️ Deleted old data for channel: {channel_id}")
+    
+    # ✅ Save new channel with user_id
     try:
-        await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
-        await addCap(channel_id, Rkn_Bots.DEF_CAP)
+        dets = {
+            "user_id": user_id,
+            "chnl_id": channel_id,
+            "caption": Rkn_Bots.DEF_CAP
+        }
+        await chnl_ids.insert_one(dets)
         print(f"✅ Saved channel {channel_id} for user {user_id}")
     except Exception as e:
         print(f"❌ Database save error: {e}")
@@ -318,8 +342,6 @@ async def auto_set_channel(bot, message):
         await logger.channel_setup(user_id, channel_id, channel_title)
     except Exception as e:
         print(f"⚠️ Log error: {e}")
-    
-    print(f"✅ Channel {channel_id} auto-set for user {user_id}")
     
     await message.reply_text(
         f"✅ **Channel Set Successfully!**\n\n"
@@ -366,13 +388,21 @@ async def setCaption(bot, message):
     
     user_id = None
     
-    if message.reply_to_message and message.reply_to_message.from_user:
-        user_id = message.reply_to_message.from_user.id
+    # ✅ FIXED: Proper async iteration
+    try:
+        admins = []
+        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            admins.append(admin)
+        
+        for admin in admins:
+            if admin.user and not admin.user.is_bot:
+                user_id = admin.user.id
+                break
+    except Exception as e:
+        print(f"⚠️ Could not get admins: {e}")
     
-    if not user_id:
-        owner_id = await get_channel_owner_or_admin(bot, channel_id)
-        if owner_id:
-            user_id = owner_id
+    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     if not user_id:
         user_id = channel_id
@@ -382,9 +412,9 @@ async def setCaption(bot, message):
     if len(message.command) < 2:
         await message.reply_text(
             f"❌ **Please provide caption!**\n\n"
-            f"**Usage:** `/set_caption Your caption here {file_name}`\n\n"
+            f"**Usage:** `/set_caption Your caption here`\n\n"
             f"**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
-            f"**{file_name}** - Shows original file name"
+            f"**{{file_name}}** - Shows original file name"
         )
         return
     
@@ -437,13 +467,21 @@ async def setButtons(bot, message):
     
     user_id = None
     
-    if message.reply_to_message and message.reply_to_message.from_user:
-        user_id = message.reply_to_message.from_user.id
+    # ✅ FIXED: Proper async iteration
+    try:
+        admins = []
+        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            admins.append(admin)
+        
+        for admin in admins:
+            if admin.user and not admin.user.is_bot:
+                user_id = admin.user.id
+                break
+    except Exception as e:
+        print(f"⚠️ Could not get admins: {e}")
     
-    if not user_id:
-        owner_id = await get_channel_owner_or_admin(bot, channel_id)
-        if owner_id:
-            user_id = owner_id
+    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     if not user_id:
         user_id = channel_id
@@ -638,13 +676,21 @@ async def delCaption(bot, message):
     
     user_id = None
     
-    if message.reply_to_message and message.reply_to_message.from_user:
-        user_id = message.reply_to_message.from_user.id
+    # ✅ FIXED: Proper async iteration
+    try:
+        admins = []
+        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            admins.append(admin)
+        
+        for admin in admins:
+            if admin.user and not admin.user.is_bot:
+                user_id = admin.user.id
+                break
+    except Exception as e:
+        print(f"⚠️ Could not get admins: {e}")
     
-    if not user_id:
-        owner_id = await get_channel_owner_or_admin(bot, channel_id)
-        if owner_id:
-            user_id = owner_id
+    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     if not user_id:
         user_id = channel_id
@@ -696,13 +742,21 @@ async def removeButtons(bot, message):
     
     user_id = None
     
-    if message.reply_to_message and message.reply_to_message.from_user:
-        user_id = message.reply_to_message.from_user.id
+    # ✅ FIXED: Proper async iteration
+    try:
+        admins = []
+        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+            admins.append(admin)
+        
+        for admin in admins:
+            if admin.user and not admin.user.is_bot:
+                user_id = admin.user.id
+                break
+    except Exception as e:
+        print(f"⚠️ Could not get admins: {e}")
     
-    if not user_id:
-        owner_id = await get_channel_owner_or_admin(bot, channel_id)
-        if owner_id:
-            user_id = owner_id
+    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
     if not user_id:
         user_id = channel_id
@@ -893,8 +947,8 @@ async def auto_edit_caption(bot, message):
                                     is_video_file = True
                             
                             if file_type == "video" or is_video_file:
-                                user_data = await chnl_ids.find_one({"chnl_id": chnl_id})
-                                user_id = user_data.get("user_id") if user_data else None
+                                # ✅ Get user_id from channel data
+                                user_id = cap_dets.get("user_id") if cap_dets else None
                                 
                                 if user_id:
                                     settings = await getWatermarkSettings(user_id)
