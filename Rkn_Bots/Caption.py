@@ -21,6 +21,13 @@ except:
         async def process_thumbnail(self, message, text): return None
     print("⚠️ Watermark module not available")
 
+# ✅ LOG CHANNEL IGNORE - ADD THIS LINE
+LOG_CHANNEL_ID = int(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
+
+# ✅ DUPLICATE TRACKING
+processed_messages = set()
+processed_messages_max = 1000
+
 print("🔄 Loading Caption.py...")
 
 # ✅ DUPLICATE MESSAGE TRACKING
