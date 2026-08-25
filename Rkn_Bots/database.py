@@ -4,7 +4,7 @@ from config import Rkn_Bots
 client = motor.motor_asyncio.AsyncIOMotorClient(Rkn_Bots.DB_URL)
 db = client[Rkn_Bots.DB_NAME]
 chnl_ids = db.chnl_ids
-users = db.users  # ✅ Make sure users collection exists
+users = db.users
 
 async def insert(user_id):
     user_det = {"_id": user_id}
@@ -84,6 +84,32 @@ async def getChannelData(chnl_id):
 
 async def deleteButtons(chnl_id):
     await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
+
+# ============ WATERMARK FUNCTIONS ============
+
+async def getWatermarkSettings(user_id):
+    """Get watermark settings for a user"""
+    data = await chnl_ids.find_one({"user_id": user_id})
+    if data:
+        return {
+            "enabled": data.get("watermark_enabled", False),
+            "text": data.get("watermark_text", "")
+        }
+    return {"enabled": False, "text": ""}
+
+async def updateWatermarkText(user_id, text):
+    """Update watermark text"""
+    await chnl_ids.update_one(
+        {"user_id": user_id},
+        {"$set": {"watermark_text": text}}
+    )
+
+async def updateWatermarkStatus(user_id, enabled):
+    """Enable/disable watermark"""
+    await chnl_ids.update_one(
+        {"user_id": user_id},
+        {"$set": {"watermark_enabled": enabled}}
+    )
 
 # ============ RESET FUNCTIONS ============
 
