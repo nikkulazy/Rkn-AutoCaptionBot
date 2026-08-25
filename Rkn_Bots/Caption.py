@@ -187,7 +187,7 @@ async def callback_handler(bot, callback_query):
 async def get_channel_owner_or_admin(bot, channel_id):
     """Get the owner or admin of a channel"""
     try:
-        admins = await bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
+        admins = bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
         async for admin in admins:
             if admin.user and not admin.user.is_bot:
                 return admin.user.id
