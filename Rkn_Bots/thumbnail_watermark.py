@@ -12,40 +12,35 @@ class ThumbnailWatermark:
         self.temp_dir = "thumb_watermark"
         os.makedirs(self.temp_dir, exist_ok=True)
         
-        # 🔧 WATERMARK SETTINGS - YAHAN CHANGE KAREIN
-        self.font_size_ratio = 8       
-        self.font_size_min = 20        
-        self.font_size_max = 60
-        self.position_offset_y = 30    
+        # 🔧 WATERMARK SETTINGS - CENTER + WHITE
+        self.font_size_ratio = 10       # Font size ratio (smaller = bigger font)
+        self.font_size_min = 25        
+        self.font_size_max = 80
+        self.position_offset_y = 0      # 0 = exact center
         self.bg_enabled = True         
-        self.bg_opacity = 80           
-        self.bg_padding = 20
-        self.text_color = (255, 255, 255, 255)
-        
-        self.settings = {
-            "enabled": False,
-            "text": "",
-            "position": "center",
-            "color": "white"
-        }
+        self.bg_opacity = 100           # Full opacity background
+        self.bg_padding = 25
+        self.text_color = (255, 255, 255, 255)  # Pure White
     
     async def download_thumbnail(self, message):
         """Download thumbnail from video message"""
         try:
             if not message.video or not message.video.thumbs:
+                print("❌ No thumbnail found in video")
                 return None
             
             thumb = message.video.thumbs[0]
             file_name = f"{self.temp_dir}/thumb_{message.id}_{datetime.now().timestamp()}.jpg"
             
             await self.bot.download_media(thumb.file_id, file_name=file_name)
+            print(f"✅ Thumbnail downloaded: {file_name}")
             return file_name
         except Exception as e:
             print(f"❌ Thumbnail download error: {e}")
             return None
     
     async def add_watermark(self, image_path, text):
-        """Add watermark to thumbnail image - Center + Down, Light Background, Bright White"""
+        """Add watermark to thumbnail - Exact Center with White Text"""
         try:
             if not text:
                 return image_path
@@ -56,13 +51,16 @@ class ThumbnailWatermark:
             img = Image.open(image_path).convert("RGBA")
             print(f"📐 Image size: {img.size}")
             
+            # Calculate font size based on image
             font_size = int(min(img.size) / self.font_size_ratio)
             font_size = max(self.font_size_min, min(font_size, self.font_size_max))
             print(f"🔤 Font size: {font_size}")
             
+            # Create watermark layer
             watermark = Image.new("RGBA", img.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(watermark)
             
+            # Load font
             try:
                 font = ImageFont.truetype("arial.ttf", font_size)
             except:
@@ -72,37 +70,44 @@ class ThumbnailWatermark:
                     font = ImageFont.load_default()
                     print("⚠️ Using default font")
             
+            # Get text size
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             print(f"📏 Text size: {text_width}x{text_height}")
             
+            # ✅ EXACT CENTER POSITION
             x = (img.width - text_width) // 2
             y = (img.height - text_height) // 2 + self.position_offset_y
-            print(f"📍 Position: ({x}, {y})")
+            print(f"📍 Center Position: ({x}, {y})")
             
+            # ✅ Add background box
             if self.bg_enabled:
                 box_padding = self.bg_padding
                 draw.rectangle(
                     [x - box_padding, y - box_padding, 
                      x + text_width + box_padding, y + text_height + box_padding],
-                    fill=(0, 0, 0, self.bg_opacity)
+                    fill=(0, 0, 0, self.bg_opacity)  # Black background with opacity
                 )
-                print(f"📦 Added background box (opacity: {self.bg_opacity})")
+                print(f"📦 Added background box")
             
+            # ✅ Shadow for better visibility
             shadow_offset = 2
             draw.text(
                 (x + shadow_offset, y + shadow_offset),
                 text,
                 font=font,
-                fill=(0, 0, 0, 150)
+                fill=(0, 0, 0, 200)  # Dark shadow
             )
             
-            draw.text((x, y), text, font=font, fill=self.text_color)
-            print("✅ Bright white text drawn successfully")
+            # ✅ WHITE TEXT (Pure White)
+            draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
+            print("✅ White text drawn successfully")
             
+            # Combine images
             combined = Image.alpha_composite(img, watermark)
             
+            # Save
             output_path = image_path.replace(".jpg", "_watermarked.jpg")
             combined.convert("RGB").save(output_path, quality=95)
             print(f"💾 Saved: {output_path}")
@@ -119,21 +124,29 @@ class ThumbnailWatermark:
         """Process thumbnail with watermark"""
         try:
             if not text:
+                print("❌ No watermark text provided")
                 return None
             
+            # Download thumbnail
             thumb_path = await self.download_thumbnail(message)
             if not thumb_path:
-                print("❌ No thumbnail downloaded")
+                print("❌ Failed to download thumbnail")
                 return None
             
             print(f"📥 Downloaded: {thumb_path}")
             
+            # Add watermark
             watermarked_path = await self.add_watermark(thumb_path, text)
             
             if watermarked_path and os.path.exists(watermarked_path):
-                print(f"✅ Watermarked: {watermarked_path}")
-                os.rename(watermarked_path, thumb_path)
-                print(f"📝 Renamed watermarked to: {thumb_path}")
+                # Rename watermarked file to original name
+                if watermarked_path != thumb_path:
+                    # Remove old file
+                    if os.path.exists(thumb_path):
+                        os.remove(thumb_path)
+                    # Rename watermarked to original
+                    os.rename(watermarked_path, thumb_path)
+                    print(f"✅ Watermarked thumbnail saved: {thumb_path}")
                 return thumb_path
             
             return None
