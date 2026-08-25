@@ -5,37 +5,22 @@ from .database import total_user, getid, delete, insert, chnl_ids, users
 from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
 from .database import resetChannelData, resetUserData
-from .database import getWatermarkSettings, updateWatermarkText, updateWatermarkStatus, removeWatermark, getChannelIdByUser
 from pyrogram.errors import FloodWait
 
-# ==================== LOGGER IMPORT ====================
+# ==================== ADD LOGGER IMPORT ====================
 from .logger import Logger
 
 print("🔄 Loading Caption.py...")
 
-# ==================== WATERMARK IMPORT ====================
-from .thumbnail_watermark import ThumbnailWatermark, init_thumb_watermark
-
-# Global watermark instance
-thumb_watermark = None
-
-async def get_watermark_instance(bot):
-    global thumb_watermark
-    if thumb_watermark is None:
-        thumb_watermark = await init_thumb_watermark(bot)
-    return thumb_watermark
-
 # ==================== MAIN MENU BUTTONS ====================
 
 async def main_menu_buttons():
+    """Main menu with buttons"""
     buttons = types.InlineKeyboardMarkup([
         [
             types.InlineKeyboardButton("📝 Set Caption", callback_data="set_caption"),
             types.InlineKeyboardButton("📎 Add Button", callback_data="add_button")
-        ],
-        [
-            types.InlineKeyboardButton("📊 Status", callback_data="status")
-        ],
+        ], 
         [
             types.InlineKeyboardButton("📢 Main Channel", url="https://t.me/wolverine273"),
             types.InlineKeyboardButton("💬 Help Group", url="https://t.me/WOLVERIN_P")
@@ -44,6 +29,7 @@ async def main_menu_buttons():
     return buttons
 
 async def back_button_only():
+    """Only back button"""
     buttons = types.InlineKeyboardMarkup([
         [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
     ])
@@ -52,17 +38,21 @@ async def back_button_only():
 # ==================== GET HOME MENU CAPTION ====================
 
 async def get_home_caption(user_id, first_name=None):
+    """Get home menu caption with welcome message and user name"""
+    
+    # ✅ Welcome message with user name
     if first_name:
         welcome = f"**👋 Welcome {first_name}!**\n\n"
     else:
         welcome = f"**👋 Welcome!**\n\n"
     
+    # ✅ Channel status
     chkData = await getChannelDataByUser(user_id)
     
     if chkData:
         channel_status = "✅ **Channel is Connected!**\n\nYou can manage your settings using the buttons below."
     else:
-        channel_status = "❌ **No Channel Connected!**\n\n📌 **How to connect:**\n1. Add me as admin in your channel\n2. Send `/set_caption` in your channel\n3. I'll auto-detect your channel!"
+        channel_status = "❌ **No Channel Connected!**\n\n📌 **How to connect:**\n1. Add me as admin in your channel\n2. Send `/set_caption` or `/set_buttons` in your channel\n3. I'll auto-detect your channel!"
     
     caption = f"{welcome}"
     caption += f"**This is powerful Auto caption bot fully customised and easy to use.**\n\n"
@@ -73,6 +63,7 @@ async def get_home_caption(user_id, first_name=None):
 # ==================== CHECK IF BOT IS ADMIN IN CHANNEL ====================
 
 async def check_bot_admin(bot, channel_id):
+    """Check if bot is admin in the channel"""
     try:
         chat_member = await bot.get_chat_member(channel_id, (await bot.get_me()).id)
         if chat_member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]:
@@ -190,46 +181,14 @@ async def callback_handler(bot, callback_query):
             reply_markup=buttons
         )
         await callback_query.answer()
-    
-    elif data == "status":
-        chkData = await getChannelDataByUser(user_id)
-        if not chkData:
-            await callback_query.message.reply_text(
-                f"❌ **No settings found!**\n\n"
-                f"First set up your channel."
-            )
-        else:
-            chnl_id = chkData.get("chnl_id")
-            channel_data = await getChannelData(chnl_id)
-            caption = channel_data.get("caption", "Not set") if channel_data else "Not set"
-            buttons_data = channel_data.get("buttons", []) if channel_data else []
-            btn_count = len(buttons_data)
-            
-            wm_settings = await getWatermarkSettings(user_id)
-            wm_status = "✅ Enabled" if wm_settings.get("enabled") else "❌ Disabled / Not Set"
-            wm_text = wm_settings.get("text") or "Not set"
-            
-            await callback_query.message.reply_text(
-                f"**📊 Your Settings**\n\n"
-                f"🔹 **Channel ID:** `{chnl_id}`\n\n"
-                f"🔹 **Caption:**\n`{caption}`\n\n"
-                f"🔹 **Buttons:** ({btn_count})\n"
-                f"{'✅ Set' if btn_count > 0 else '❌ Not set'}\n\n"
-                f"🔹 **Watermark:** {wm_status}\n"
-                f"📝 **Text:** `{wm_text}`\n"
-                f"📌 **Applied on:** Video Thumbnail Only"
-            )
-        await callback_query.answer()
 
 # ==================== CHECK CHANNEL OWNER/ADMIN ====================
 
 async def get_channel_owner_or_admin(bot, channel_id):
+    """Get the owner or admin of a channel"""
     try:
-        admins = []
-        async for member in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            admins.append(member)
-        
-        for admin in admins:
+        admins = await bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
+        async for admin in admins:
             if admin.user and not admin.user.is_bot:
                 return admin.user.id
     except Exception as e:
@@ -237,82 +196,64 @@ async def get_channel_owner_or_admin(bot, channel_id):
     
     return None
 
-# ==================== AUTO SET CHANNEL ====================
+# ==================== AUTO SET CHANNEL WITH OWNER DETECTION ====================
 
 async def auto_set_channel(bot, message):
+    """Auto set channel when user sends command in channel - detects channel owner/admin"""
     channel_id = message.chat.id
     
+    # ✅ Check if bot is admin in channel
     is_admin = await check_bot_admin(bot, channel_id)
     
     if not is_admin:
         await message.reply_text(
             f"❌ **I'm not admin in this channel!**\n\n"
-            f"Please add me as admin in this channel first."
+            f"Please add me as admin in this channel first.\n\n"
+            f"**How to add:**\n"
+            f"1. Open channel settings\n"
+            f"2. Go to Administrators\n"
+            f"3. Add this bot as admin"
         )
         return None
     
+    # ✅ Get user ID - channel ke owner/admin ko detect karo
     user_id = None
     
-    try:
-        admins = []
-        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            admins.append(admin)
-        
-        for admin in admins:
-            if admin.user and not admin.user.is_bot:
-                user_id = admin.user.id
-                print(f"👤 Found admin: {user_id}")
-                break
-    except Exception as e:
-        print(f"⚠️ Could not get admins: {e}")
+    # Method 1: Agar message reply hai toh usme se user ID lo
+    if message.reply_to_message and message.reply_to_message.from_user:
+        user_id = message.reply_to_message.from_user.id
     
-    if not user_id and message.from_user:
-        user_id = message.from_user.id
-        print(f"👤 Found from sender: {user_id}")
+    # Method 2: Channel owner/admin dhundho
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
+            print(f"👤 Found channel owner/admin: {user_id}")
     
+    # Method 3: Agar kisi bhi tarah user ID nahi mili toh channel ID hi use karo
     if not user_id:
         user_id = channel_id
         print(f"⚠️ Using channel ID as user ID: {user_id}")
     
     print(f"👤 Final User ID: {user_id}")
-    print(f"📢 Channel ID: {channel_id}")
     
-    chkData = await getChannelData(channel_id)
+    # ✅ Check if channel already exists
+    chkData = await getChannelDataByUser(user_id)
     
+    if chkData and chkData.get("chnl_id") == channel_id:
+        # Channel already set, return it
+        return channel_id
+    
+    # ✅ Delete old channel data if exists
     if chkData:
-        if not chkData.get("user_id"):
-            await chnl_ids.update_one(
-                {"chnl_id": channel_id},
-                {"$set": {"user_id": user_id}}
-            )
-            print(f"✅ Fixed: Added user_id {user_id} to channel {channel_id}")
-        
-        if chkData.get("user_id") == user_id:
-            print(f"✅ Channel already set for user {user_id}")
-            return channel_id
-    
-    old_user_data = await getChannelDataByUser(user_id)
-    if old_user_data:
         await chnl_ids.delete_many({"user_id": user_id})
-        print(f"🗑️ Deleted old data for user: {user_id}")
+        await chnl_ids.delete_many({"chnl_id": chkData.get("chnl_id")})
     
-    if chkData:
-        await chnl_ids.delete_many({"chnl_id": channel_id})
-        print(f"🗑️ Deleted old data for channel: {channel_id}")
+    # ✅ Save new channel
+    await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+    await addCap(channel_id, Rkn_Bots.DEF_CAP)
     
-    try:
-        dets = {
-            "user_id": user_id,
-            "chnl_id": channel_id,
-            "caption": Rkn_Bots.DEF_CAP
-        }
-        await chnl_ids.insert_one(dets)
-        print(f"✅ Saved channel {channel_id} for user {user_id}")
-    except Exception as e:
-        print(f"❌ Database save error: {e}")
-        await message.reply_text(f"❌ Database error: {e}")
-        return None
-    
+    # ✅ Get channel title for log
     channel_title = None
     try:
         chat = await bot.get_chat(channel_id)
@@ -320,31 +261,33 @@ async def auto_set_channel(bot, message):
     except:
         pass
     
+    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.channel_setup(user_id, channel_id, channel_title)
     except Exception as e:
         print(f"⚠️ Log error: {e}")
     
+    print(f"✅ Channel {channel_id} auto-set for user {user_id}")
+    
     await message.reply_text(
         f"✅ **Channel Set Successfully!**\n\n"
         f"**Channel ID:** `{channel_id}`\n"
-        f"**Channel Name:** {channel_title or 'Unknown'}\n"
-        f"**User ID:** `{user_id}`\n\n"
+        f"**Channel Name:** {channel_title or 'Unknown'}\n\n"
         f"Now you can use:\n"
         f"• `/set_caption` - Set your caption\n"
-        f"• `/set_buttons` - Set your buttons\n"
-        f"• `/set_watermark` - Set watermark text"
+        f"• `/set_buttons` - Set your buttons"
     )
     
     return channel_id
 
-# ==================== SET CAPTION COMMAND ====================
+# ==================== SET CAPTION COMMAND (WORKS IN CHANNEL ONLY) ====================
 
 @Client.on_message(filters.command("set_caption") & (filters.channel | filters.private))
 async def setCaption(bot, message):
     print("✅ /set_caption command triggered!")
     
+    # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
@@ -364,47 +307,45 @@ async def setCaption(bot, message):
     except:
         pass
     
+    # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
     
+    # ✅ User ID nikaalo (channel owner/admin)
     user_id = None
     
-    try:
-        admins = []
-        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            admins.append(admin)
-        
-        for admin in admins:
-            if admin.user and not admin.user.is_bot:
-                user_id = admin.user.id
-                break
-    except Exception as e:
-        print(f"⚠️ Could not get admins: {e}")
-    
-    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+    if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
     
     if not user_id:
         user_id = channel_id
     
     print(f"👤 User ID for caption: {user_id}")
     
+    # ✅ Check if caption provided
     if len(message.command) < 2:
         await message.reply_text(
             f"❌ **Please provide caption!**\n\n"
-            f"**Usage:** `/set_caption Your caption here`\n\n"
-            f"**Example:** `/set_caption 📁 File: {{file_name}}\nJoin @wolverine273`\n\n"
-            f"**{{file_name}}** - Shows original file name"
+            f"**Usage:** `/set_caption Your caption here {file_name}`\n\n"
+            f"**Example:** `/set_caption 📁 File: {file_name}\nJoin @wolverine273`\n\n"
+            f"**{file_name}** - Shows original file name"
         )
         return
     
     caption = message.text.split(" ", 1)[1]
     
+    # ✅ Update caption
     await updateCapByUser(user_id, caption)
     await updateCap(channel_id, caption)
     
+    # ✅ Send log
     try:
         logger = Logger(bot)
         await logger.caption_set(user_id, channel_id, caption)
@@ -417,12 +358,13 @@ async def setCaption(bot, message):
         f"**Your New Caption:**\n`{caption}`"
     )
 
-# ==================== SET BUTTONS COMMAND ====================
+# ==================== SET BUTTONS COMMAND (WORKS IN CHANNEL ONLY) ====================
 
 @Client.on_message(filters.command("set_buttons") & (filters.channel | filters.private))
 async def setButtons(bot, message):
     print("✅ /set_buttons command triggered!")
     
+    # ✅ Agar private me command aayi hai toh guide karo
     if message.chat.type == enums.ChatType.PRIVATE:
         buttons = await back_button_only()
         await message.reply_text(
@@ -442,27 +384,22 @@ async def setButtons(bot, message):
     except:
         pass
     
+    # ✅ Channel me se aaya hai toh auto-set channel
     channel_id = await auto_set_channel(bot, message)
     
     if channel_id is None:
         return
     
+    # ✅ User ID nikaalo
     user_id = None
     
-    try:
-        admins = []
-        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            admins.append(admin)
-        
-        for admin in admins:
-            if admin.user and not admin.user.is_bot:
-                user_id = admin.user.id
-                break
-    except Exception as e:
-        print(f"⚠️ Could not get admins: {e}")
-    
-    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+    if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
     
     if not user_id:
         user_id = channel_id
@@ -531,142 +468,7 @@ async def setButtons(bot, message):
         reply_markup=types.InlineKeyboardMarkup(buttons_data)
     )
 
-# ==================== WATERMARK COMMANDS ====================
-
-@Client.on_message(filters.command("set_watermark") & filters.private)
-async def set_watermark_cmd(bot, message):
-    """Set watermark text - Any user can use this"""
-    user_id = message.from_user.id
-    print(f"✅ /set_watermark command triggered by user: {user_id}")
-    
-    # ✅ Check if user has channel connected
-    chkData = await getChannelDataByUser(user_id)
-    if not chkData:
-        buttons = await back_button_only()
-        await message.reply_text(
-            f"❌ **No channel connected!**\n\n"
-            f"First set up your channel:\n"
-            f"1. Add me as admin in your channel\n"
-            f"2. Send `/set_caption` in your channel\n"
-            f"3. Then come back here to set watermark",
-            reply_markup=buttons
-        )
-        return
-    
-    if len(message.command) < 2:
-        return await message.reply_text(
-            f"**🖼️ Set Watermark**\n\n"
-            f"**Position:** Center + Thoda Down\n"
-            f"**Text Color:** White\n"
-            f"**Background:** Black (80% opacity)\n"
-            f"**Applied on:** Video Thumbnail Only\n\n"
-            f"**Usage:** `/set_watermark Your Text Here`\n\n"
-            f"**Example:** `/set_watermark @wolverine273`\n\n"
-            f"**Commands:**\n"
-            f"• `/set_watermark` - Set watermark text\n"
-            f"• `/remove_watermark` - Remove watermark\n"
-            f"• `/watermark_status` - Check watermark status\n\n"
-            f"⚠️ Watermark will be added to **video thumbnails** only."
-        )
-    
-    text = message.text.split(" ", 1)[1]
-    
-    # ✅ Save watermark in database
-    await updateWatermarkText(user_id, text)
-    await updateWatermarkStatus(user_id, True)
-    
-    channel_id = await getChannelIdByUser(user_id)
-    
-    await message.reply_text(
-        f"✅ **Watermark Text Saved & Enabled!**\n\n"
-        f"📝 **Text:** `{text}`\n"
-        f"📢 **Channel ID:** `{channel_id}`\n\n"
-        f"**Position:** Center + Thoda Down\n"
-        f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)\n"
-        f"**Applied on:** Video Thumbnail Only\n\n"
-        f"Now watermarks will be added to **video thumbnails**.\n\n"
-        f"To remove: `/remove_watermark`"
-    )
-
-@Client.on_message(filters.command("remove_watermark") & filters.private)
-async def remove_watermark_cmd(bot, message):
-    """Remove watermark - Any user can use this"""
-    user_id = message.from_user.id
-    print(f"✅ /remove_watermark command triggered by user: {user_id}")
-    
-    chkData = await getChannelDataByUser(user_id)
-    if not chkData:
-        buttons = await back_button_only()
-        await message.reply_text(
-            f"❌ **No channel connected!**\n\n"
-            f"First set up your channel.",
-            reply_markup=buttons
-        )
-        return
-    
-    # ✅ Remove watermark from database
-    await removeWatermark(user_id)
-    
-    await message.reply_text(
-        f"✅ **Watermark Removed Successfully!**\n\n"
-        f"Watermark has been removed.\n"
-        f"No more watermarks will be added to video thumbnails.\n\n"
-        f"To set again: `/set_watermark Your Text`"
-    )
-
-@Client.on_message(filters.command("watermark_status") & filters.private)
-async def watermark_status_cmd(bot, message):
-    """Check watermark status - Any user can use this"""
-    user_id = message.from_user.id
-    print(f"✅ /watermark_status command triggered by user: {user_id}")
-    
-    settings = await getWatermarkSettings(user_id)
-    channel_id = await getChannelIdByUser(user_id)
-    
-    status = "✅ Enabled" if settings.get("enabled") else "❌ Disabled / Not Set"
-    text = settings.get("text") or "Not set"
-    
-    await message.reply_text(
-        f"**🖼️ Watermark Status**\n\n"
-        f"• **Status:** {status}\n"
-        f"• **Text:** `{text}`\n"
-        f"• **Channel ID:** `{channel_id or 'Not connected'}`\n\n"
-        f"**Position:** Center + Thoda Down\n"
-        f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)\n"
-        f"**Applied on:** Video Thumbnail Only\n\n"
-        f"**Commands:**\n"
-        f"• `/set_watermark` - Set watermark\n"
-        f"• `/remove_watermark` - Remove watermark"
-    )
-
-@Client.on_message(filters.command("watermark_status") & filters.private)
-async def watermark_status_cmd(bot, message):
-    """Check watermark status - Any user can use this"""
-    user_id = message.from_user.id
-    
-    settings = await getWatermarkSettings(user_id)
-    channel_id = await getChannelIdByUser(user_id)
-    
-    status = "✅ Enabled" if settings.get("enabled") else "❌ Disabled / Not Set"
-    text = settings.get("text") or "Not set"
-    
-    await message.reply_text(
-        f"**🖼️ Watermark Status**\n\n"
-        f"• **Status:** {status}\n"
-        f"• **Text:** `{text}`\n"
-        f"• **Channel ID:** `{channel_id or 'Not connected'}`\n\n"
-        f"**Position:** Center + Thoda Down\n"
-        f"**Text Color:** White\n"
-        f"**Background:** Black (80% opacity)\n"
-        f"**Applied on:** Video Thumbnail Only\n\n"
-        f"**Commands:**\n"
-        f"• `/set_watermark` - Set watermark\n"
-        f"• `/remove_watermark` - Remove watermark"
-    )
-
-# ==================== DELETE CAPTION COMMAND ====================
+# ==================== DELETE CAPTION COMMAND (WORKS IN CHANNEL) ====================
 
 @Client.on_message(filters.command(["delcaption", "del_caption", "delete_caption"]) & (filters.channel | filters.private))
 async def delCaption(bot, message):
@@ -693,20 +495,13 @@ async def delCaption(bot, message):
     
     user_id = None
     
-    try:
-        admins = []
-        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            admins.append(admin)
-        
-        for admin in admins:
-            if admin.user and not admin.user.is_bot:
-                user_id = admin.user.id
-                break
-    except Exception as e:
-        print(f"⚠️ Could not get admins: {e}")
-    
-    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+    if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
     
     if not user_id:
         user_id = channel_id
@@ -731,7 +526,7 @@ async def delCaption(bot, message):
         f"**Default Caption:**\n`{Rkn_Bots.DEF_CAP}`"
     )
 
-# ==================== REMOVE BUTTONS COMMAND ====================
+# ==================== REMOVE BUTTONS COMMAND (WORKS IN CHANNEL) ====================
 
 @Client.on_message(filters.command("remove_buttons") & (filters.channel | filters.private))
 async def removeButtons(bot, message):
@@ -758,20 +553,13 @@ async def removeButtons(bot, message):
     
     user_id = None
     
-    try:
-        admins = []
-        async for admin in bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-            admins.append(admin)
-        
-        for admin in admins:
-            if admin.user and not admin.user.is_bot:
-                user_id = admin.user.id
-                break
-    except Exception as e:
-        print(f"⚠️ Could not get admins: {e}")
-    
-    if not user_id and message.reply_to_message and message.reply_to_message.from_user:
+    if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
+    
+    if not user_id:
+        owner_id = await get_channel_owner_or_admin(bot, channel_id)
+        if owner_id:
+            user_id = owner_id
     
     if not user_id:
         user_id = channel_id
@@ -832,20 +620,13 @@ async def status_cmd(bot, message):
     buttons_data = channel_data.get("buttons", []) if channel_data else []
     
     btn_count = len(buttons_data)
-    
-    wm_settings = await getWatermarkSettings(user_id)
-    wm_status = "✅ Enabled" if wm_settings.get("enabled") else "❌ Disabled / Not Set"
-    wm_text = wm_settings.get("text") or "Not set"
+    btn_preview = "\n".join([f"• {btn[0].text} → {btn[0].url}" for btn in buttons_data]) if buttons_data else "No buttons set"
     
     await message.reply_text(
         f"**📊 Your Settings**\n\n"
         f"🔹 **Channel ID:** `{chnl_id}`\n\n"
         f"🔹 **Caption:**\n`{caption}`\n\n"
-        f"🔹 **Buttons:** ({btn_count})\n"
-        f"{'✅ Set' if btn_count > 0 else '❌ Not set'}\n\n"
-        f"🔹 **Watermark:** {wm_status}\n"
-        f"📝 **Text:** `{wm_text}`\n"
-        f"📌 **Applied on:** Video Thumbnail Only"
+        f"🔹 **Buttons:** ({btn_count})\n{btn_preview}"
     )
 
 # ==================== HELP COMMAND ====================
@@ -874,24 +655,16 @@ async def help_cmd(bot, message):
         f"❌ `/delcaption` - Delete caption\n"
         f"🗑️ `/remove_buttons` - Remove buttons\n\n"
         f"**📋 Commands (Private):**\n"
-        f"📊 `/status` - Check all settings\n"
-        f"🖼️ `/set_watermark` - Set watermark text\n"
-        f"🖼️ `/remove_watermark` - Remove watermark\n"
-        f"🖼️ `/watermark_status` - Check watermark status\n"
+        f"📊 `/status` - Check settings\n"
         f"📢 `/help` - Show this help\n\n"
         f"**📌 Variables in Caption:**\n"
         f"`{{file_name}}` - Original file name\n\n"
         f"**📌 Button Format:**\n"
-        f"`[Text]:[URL]` separated by ` | `\n\n"
-        f"**📌 Watermark Settings:**\n"
-        f"• **Position:** Center + Thoda Down\n"
-        f"• **Text Color:** White\n"
-        f"• **Background:** Black (80% opacity)\n"
-        f"• **Applied on:** Video Thumbnail Only",
+        f"`[Text]:[URL]` separated by ` | `",
         reply_markup=buttons
     )
 
-# ==================== AUTO EDIT CAPTION + WATERMARK ====================
+# ==================== AUTO EDIT CAPTION + FORWARD TO LOG CHANNEL ====================
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
@@ -949,34 +722,6 @@ async def auto_edit_caption(bot, message):
                         await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
                     except Exception as e:
                         print(f"⚠️ Log error: {e}")
-                    
-                    # ===== WATERMARK CODE =====
-                    if file_type in ["video", "document"]:
-                        try:
-                            is_video_file = False
-                            if file_name:
-                                video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.3gp', '.ts']
-                                if any(file_name.lower().endswith(ext) for ext in video_extensions):
-                                    is_video_file = True
-                            
-                            if file_type == "video" or is_video_file:
-                                user_id = cap_dets.get("user_id") if cap_dets else None
-                                
-                                if user_id:
-                                    settings = await getWatermarkSettings(user_id)
-                                    if settings.get("enabled"):
-                                        watermark_text = settings.get("text")
-                                        if watermark_text:
-                                            thumb_wm = await get_watermark_instance(bot)
-                                            thumb_path = await thumb_wm.process_thumbnail(message, watermark_text)
-                                            if thumb_path:
-                                                await thumb_wm.replace_thumbnail(message, thumb_path)
-                                                print(f"✅ Watermark added to thumbnail: {file_name_clean}")
-                        except Exception as e:
-                            print(f"⚠️ Watermark error: {e}")
-                            import traceback
-                            traceback.print_exc()
-                    # ===== END WATERMARK CODE =====
                     
                     if cap_dets:
                         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)

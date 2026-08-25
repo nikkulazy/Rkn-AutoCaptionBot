@@ -4,7 +4,7 @@ from config import Rkn_Bots
 client = motor.motor_asyncio.AsyncIOMotorClient(Rkn_Bots.DB_URL)
 db = client[Rkn_Bots.DB_NAME]
 chnl_ids = db.chnl_ids
-users = db.users
+users = db.users  # ✅ Make sure users collection exists
 
 async def insert(user_id):
     user_det = {"_id": user_id}
@@ -31,7 +31,6 @@ async def addCapByUser(user_id, chnl_id, caption, buttons=None):
     if buttons:
         dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
-    print(f"✅ Inserted: user={user_id}, channel={chnl_id}")
 
 async def updateCapByUser(user_id, caption):
     await chnl_ids.update_one({"user_id": user_id}, {"$set": {"caption": caption}})
@@ -49,7 +48,6 @@ async def deleteButtonsByUser(user_id):
 
 async def getChannelDataByUser(user_id):
     data = await chnl_ids.find_one({"user_id": user_id})
-    print(f"📊 getChannelDataByUser({user_id}): {data}")
     if data and "buttons" in data and data["buttons"]:
         from pyrogram.types import InlineKeyboardButton
         data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
@@ -62,7 +60,6 @@ async def addCap(chnl_id, caption, buttons=None):
     if buttons:
         dets["buttons"] = [{"text": btn[0].text, "url": btn[0].url} for btn in buttons]
     await chnl_ids.insert_one(dets)
-    print(f"✅ Inserted: channel={chnl_id}")
 
 async def updateCap(chnl_id, caption, buttons=None):
     update_data = {"caption": caption}
@@ -80,7 +77,6 @@ async def updateButtons(chnl_id, buttons):
 
 async def getChannelData(chnl_id):
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
-    print(f"📊 getChannelData({chnl_id}): {data}")
     if data and "buttons" in data and data["buttons"]:
         from pyrogram.types import InlineKeyboardButton
         data["buttons"] = [[InlineKeyboardButton(text=btn["text"], url=btn["url"])] for btn in data["buttons"]]
@@ -88,51 +84,6 @@ async def getChannelData(chnl_id):
 
 async def deleteButtons(chnl_id):
     await chnl_ids.update_one({"chnl_id": chnl_id}, {"$unset": {"buttons": ""}})
-
-# ============ WATERMARK FUNCTIONS ============
-
-async def getWatermarkSettings(user_id):
-    """Get watermark settings for a user"""
-    data = await chnl_ids.find_one({"user_id": user_id})
-    if data:
-        return {
-            "enabled": data.get("watermark_enabled", False),
-            "text": data.get("watermark_text", "")
-        }
-    return {"enabled": False, "text": ""}
-
-async def updateWatermarkText(user_id, text):
-    """Update watermark text"""
-    await chnl_ids.update_one(
-        {"user_id": user_id},
-        {"$set": {"watermark_text": text, "watermark_enabled": True}},
-        upsert=True
-    )
-    print(f"✅ Watermark text updated for user {user_id}: {text}")
-
-async def updateWatermarkStatus(user_id, enabled):
-    """Enable/disable watermark"""
-    await chnl_ids.update_one(
-        {"user_id": user_id},
-        {"$set": {"watermark_enabled": enabled}},
-        upsert=True
-    )
-    print(f"✅ Watermark status updated for user {user_id}: {enabled}")
-
-async def removeWatermark(user_id):
-    """Remove watermark completely"""
-    await chnl_ids.update_one(
-        {"user_id": user_id},
-        {"$unset": {"watermark_text": "", "watermark_enabled": ""}}
-    )
-    print(f"✅ Watermark removed for user: {user_id}")
-
-async def getChannelIdByUser(user_id):
-    """Get channel ID for a user"""
-    data = await chnl_ids.find_one({"user_id": user_id})
-    if data:
-        return data.get("chnl_id")
-    return None
 
 # ============ RESET FUNCTIONS ============
 
