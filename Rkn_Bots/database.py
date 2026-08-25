@@ -94,3 +94,25 @@ async def resetChannelData(chnl_id):
 async def resetUserData(user_id):
     await chnl_ids.delete_many({"user_id": user_id})
     print(f"✅ Reset data for user: {user_id}")
+
+# ============ WATERMARK FUNCTIONS ============
+
+async def get_watermark(chnl_id):
+    """Get watermark text for a channel"""
+    data = await chnl_ids.find_one({"chnl_id": chnl_id})
+    return data.get("watermark") if data else None
+
+async def set_watermark(chnl_id, watermark_text):
+    """Set watermark text for a channel"""
+    await chnl_ids.update_one(
+        {"chnl_id": chnl_id}, 
+        {"$set": {"watermark": watermark_text}},
+        upsert=True
+    )
+
+async def remove_watermark(chnl_id):
+    """Remove watermark from a channel"""
+    await chnl_ids.update_one(
+        {"chnl_id": chnl_id}, 
+        {"$unset": {"watermark": ""}}
+    )
