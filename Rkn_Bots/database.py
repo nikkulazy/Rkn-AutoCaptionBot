@@ -114,6 +114,14 @@ async def updateWatermarkStatus(user_id, enabled):
         {"$set": {"watermark_enabled": enabled}}
     )
 
+async def removeWatermark(user_id):
+    """Remove watermark completely"""
+    await chnl_ids.update_one(
+        {"user_id": user_id},
+        {"$unset": {"watermark_text": "", "watermark_enabled": ""}}
+    )
+    print(f"✅ Watermark removed for user: {user_id}")
+
 # ============ RESET FUNCTIONS ============
 
 async def resetChannelData(chnl_id):
