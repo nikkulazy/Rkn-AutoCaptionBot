@@ -105,7 +105,8 @@ async def updateWatermarkText(user_id, text):
     """Update watermark text"""
     await chnl_ids.update_one(
         {"user_id": user_id},
-        {"$set": {"watermark_text": text, "watermark_enabled": True}}
+        {"$set": {"watermark_text": text, "watermark_enabled": True}},
+        upsert=True
     )
     print(f"✅ Watermark text updated for user {user_id}: {text}")
 
@@ -113,7 +114,8 @@ async def updateWatermarkStatus(user_id, enabled):
     """Enable/disable watermark"""
     await chnl_ids.update_one(
         {"user_id": user_id},
-        {"$set": {"watermark_enabled": enabled}}
+        {"$set": {"watermark_enabled": enabled}},
+        upsert=True
     )
     print(f"✅ Watermark status updated for user {user_id}: {enabled}")
 
