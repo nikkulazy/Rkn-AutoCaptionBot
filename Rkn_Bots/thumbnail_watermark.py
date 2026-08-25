@@ -12,20 +12,20 @@ class ThumbnailWatermark:
         self.temp_dir = "thumb_watermark"
         os.makedirs(self.temp_dir, exist_ok=True)
         
-        # 🔧 WATERMARK SETTINGS - YAHAN CHANGE KAREIN
-        self.font_size_ratio = 8       
-        self.font_size_min = 20        
-        self.font_size_max = 60
-        self.position_offset_y = 30    
-        self.bg_enabled = True         
-        self.bg_opacity = 80           
-        self.bg_padding = 20
-        self.text_color = (255, 255, 255, 255)
+        # 🔧 WATERMARK SETTINGS - MIDDLE + DOWN, WHITE TEXT, BLACK BACKGROUND
+        self.font_size_ratio = 8        # Font size ratio (image size / 8)
+        self.font_size_min = 20         # Minimum font size
+        self.font_size_max = 60         # Maximum font size
+        self.position_offset_y = 30     # Thoda down (30px) - Middle + Down
+        self.bg_enabled = True          # Background ON
+        self.bg_opacity = 80            # Black background (80% opaque)
+        self.bg_padding = 20            # Padding around text
+        self.text_color = (255, 255, 255, 255)  # Pure White Text
         
         self.settings = {
             "enabled": False,
             "text": "",
-            "position": "center",
+            "position": "center_down",
             "color": "white"
         }
     
@@ -45,7 +45,7 @@ class ThumbnailWatermark:
             return None
     
     async def add_watermark(self, image_path, text):
-        """Add watermark to thumbnail image - Center + Down, Light Background, Bright White"""
+        """Add watermark to thumbnail image - Center + Down, Black BG, White Text"""
         try:
             if not text:
                 return image_path
@@ -56,13 +56,16 @@ class ThumbnailWatermark:
             img = Image.open(image_path).convert("RGBA")
             print(f"📐 Image size: {img.size}")
             
+            # Calculate font size dynamically
             font_size = int(min(img.size) / self.font_size_ratio)
             font_size = max(self.font_size_min, min(font_size, self.font_size_max))
             print(f"🔤 Font size: {font_size}")
             
+            # Create watermark layer
             watermark = Image.new("RGBA", img.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(watermark)
             
+            # Load font
             try:
                 font = ImageFont.truetype("arial.ttf", font_size)
             except:
@@ -72,37 +75,44 @@ class ThumbnailWatermark:
                     font = ImageFont.load_default()
                     print("⚠️ Using default font")
             
+            # Calculate text size
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             print(f"📏 Text size: {text_width}x{text_height}")
             
+            # Position: Center + Thoda Down
             x = (img.width - text_width) // 2
             y = (img.height - text_height) // 2 + self.position_offset_y
-            print(f"📍 Position: ({x}, {y})")
+            print(f"📍 Position: ({x}, {y}) - Center + {self.position_offset_y}px Down")
             
+            # ✅ BLACK BACKGROUND BOX
             if self.bg_enabled:
                 box_padding = self.bg_padding
                 draw.rectangle(
                     [x - box_padding, y - box_padding, 
                      x + text_width + box_padding, y + text_height + box_padding],
-                    fill=(0, 0, 0, self.bg_opacity)
+                    fill=(0, 0, 0, self.bg_opacity)  # Black with opacity
                 )
-                print(f"📦 Added background box (opacity: {self.bg_opacity})")
+                print(f"📦 Added black background box (opacity: {self.bg_opacity}%)")
             
+            # ✅ SHADOW (for better readability)
             shadow_offset = 2
             draw.text(
                 (x + shadow_offset, y + shadow_offset),
                 text,
                 font=font,
-                fill=(0, 0, 0, 150)
+                fill=(0, 0, 0, 150)  # Black shadow
             )
             
+            # ✅ WHITE TEXT
             draw.text((x, y), text, font=font, fill=self.text_color)
-            print("✅ Bright white text drawn successfully")
+            print("✅ White text drawn successfully")
             
+            # Combine images
             combined = Image.alpha_composite(img, watermark)
             
+            # Save output
             output_path = image_path.replace(".jpg", "_watermarked.jpg")
             combined.convert("RGB").save(output_path, quality=95)
             print(f"💾 Saved: {output_path}")
@@ -119,11 +129,17 @@ class ThumbnailWatermark:
         """Process thumbnail with watermark"""
         try:
             if not text:
+                print("❌ No watermark text")
+                return None
+            
+            # Only process if video has thumbnail
+            if not message.video or not message.video.thumbs:
+                print("ℹ️ No thumbnail found in video")
                 return None
             
             thumb_path = await self.download_thumbnail(message)
             if not thumb_path:
-                print("❌ No thumbnail downloaded")
+                print("❌ Failed to download thumbnail")
                 return None
             
             print(f"📥 Downloaded: {thumb_path}")
@@ -131,9 +147,9 @@ class ThumbnailWatermark:
             watermarked_path = await self.add_watermark(thumb_path, text)
             
             if watermarked_path and os.path.exists(watermarked_path):
-                print(f"✅ Watermarked: {watermarked_path}")
-                os.rename(watermarked_path, thumb_path)
-                print(f"📝 Renamed watermarked to: {thumb_path}")
+                # Rename watermarked file to original path
+                os.replace(watermarked_path, thumb_path)
+                print(f"✅ Watermarked: {thumb_path}")
                 return thumb_path
             
             return None
@@ -155,12 +171,15 @@ class ThumbnailWatermark:
             if not message.video:
                 return False
             
+            # Keep original caption
+            caption = message.caption or ""
+            
             await self.bot.edit_message_media(
                 chat_id=message.chat.id,
                 message_id=message.id,
                 media=InputMediaPhoto(
                     media=thumb_path,
-                    caption=message.caption or ""
+                    caption=caption
                 )
             )
             print("✅ Thumbnail replaced successfully!")
@@ -170,6 +189,7 @@ class ThumbnailWatermark:
             print(f"❌ Replace thumbnail error: {e}")
             return False
 
+# Global instance
 thumb_watermark = None
 
 async def init_thumb_watermark(bot):
