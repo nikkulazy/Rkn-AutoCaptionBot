@@ -12,14 +12,14 @@ class ThumbnailWatermark:
         self.temp_dir = "thumb_watermark"
         os.makedirs(self.temp_dir, exist_ok=True)
         
-        # 🔧 WATERMARK SETTINGS - CENTER + WHITE
-        self.font_size_ratio = 10       # Font size ratio (smaller = bigger font)
-        self.font_size_min = 25        
-        self.font_size_max = 80
-        self.position_offset_y = 0      # 0 = exact center
+        # 🔧 MODIFIED WATERMARK SETTINGS
+        self.font_size_ratio = 25       # 🔹 Bada number = chota font (pehle 10 tha)
+        self.font_size_min = 15         # 🔹 Minimum font size (pehle 25 tha)
+        self.font_size_max = 50         # 🔹 Maximum font size (pehle 80 tha)
+        self.position_offset_y = 30     # 🔹 30px neeche (center se thoda down)
         self.bg_enabled = True         
-        self.bg_opacity = 100           # Full opacity background
-        self.bg_padding = 25
+        self.bg_opacity = 200           # 🔹 Background opacity (200 = almost solid black)
+        self.bg_padding = 15            # 🔹 Background padding (pehle 25 tha - chota)
         self.text_color = (255, 255, 255, 255)  # Pure White
     
     async def download_thumbnail(self, message):
@@ -40,7 +40,7 @@ class ThumbnailWatermark:
             return None
     
     async def add_watermark(self, image_path, text):
-        """Add watermark to thumbnail - Exact Center with White Text"""
+        """Add watermark to thumbnail - Modified: Smaller font, slightly down, black background, white text"""
         try:
             if not text:
                 return image_path
@@ -51,7 +51,7 @@ class ThumbnailWatermark:
             img = Image.open(image_path).convert("RGBA")
             print(f"📐 Image size: {img.size}")
             
-            # Calculate font size based on image
+            # ✅ MODIFIED: Calculate font size based on image (ab chota font)
             font_size = int(min(img.size) / self.font_size_ratio)
             font_size = max(self.font_size_min, min(font_size, self.font_size_max))
             print(f"🔤 Font size: {font_size}")
@@ -76,20 +76,20 @@ class ThumbnailWatermark:
             text_height = bbox[3] - bbox[1]
             print(f"📏 Text size: {text_width}x{text_height}")
             
-            # ✅ EXACT CENTER POSITION
+            # ✅ MODIFIED: Center position + slightly down (30px)
             x = (img.width - text_width) // 2
             y = (img.height - text_height) // 2 + self.position_offset_y
-            print(f"📍 Center Position: ({x}, {y})")
+            print(f"📍 Position: ({x}, {y})")
             
-            # ✅ Add background box
+            # ✅ MODIFIED: Black background with padding
             if self.bg_enabled:
                 box_padding = self.bg_padding
                 draw.rectangle(
                     [x - box_padding, y - box_padding, 
                      x + text_width + box_padding, y + text_height + box_padding],
-                    fill=(0, 0, 0, self.bg_opacity)  # Black background with opacity
+                    fill=(0, 0, 0, self.bg_opacity)  # 🔹 Black background with high opacity
                 )
-                print(f"📦 Added background box")
+                print(f"📦 Added black background box")
             
             # ✅ Shadow for better visibility
             shadow_offset = 2
