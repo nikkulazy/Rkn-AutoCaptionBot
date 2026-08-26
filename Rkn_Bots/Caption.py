@@ -1,3 +1,7 @@
+# (c) @RknDeveloperr
+# Rkn Developer 
+# Don't Remove Credit 😔
+
 from pyrogram import Client, filters, errors, types, enums
 from config import Rkn_Bots
 import asyncio, re, time, sys, os
@@ -21,7 +25,7 @@ except:
         async def process_thumbnail(self, message, text): return None
     print("⚠️ Watermark module not available")
 
-# ✅ LOG CHANNEL IGNORE - ADD THIS LINE
+# ✅ LOG CHANNEL IGNORE
 LOG_CHANNEL_ID = int(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
 
 # ✅ DUPLICATE TRACKING
@@ -30,26 +34,36 @@ processed_messages_max = 1000
 
 print("🔄 Loading Caption.py...")
 
-# ✅ DUPLICATE MESSAGE TRACKING
-processed_messages = set()
-processed_messages_max = 1000
-
+# ✅ MODIFIED: BUTTONS WITH BLUE COLOR & STYLE
 async def main_menu_buttons():
     buttons = types.InlineKeyboardMarkup([
         [
-            types.InlineKeyboardButton("📝 Set Caption", callback_data="set_caption"),
-            types.InlineKeyboardButton("📎 Add Button", callback_data="add_button")
+            types.InlineKeyboardButton("📝 Set Caption", callback_data="set_caption", color="primary", style="primary"),
+            types.InlineKeyboardButton("📎 Add Button", callback_data="add_button", color="primary", style="primary")
         ], 
         [
-            types.InlineKeyboardButton("📢 Main Channel", url="https://t.me/wolverine273"),
-            types.InlineKeyboardButton("💬 Help Group", url="https://t.me/WOLVERIN_P")
+            types.InlineKeyboardButton("📢 Main Channel", url="https://t.me/wolverine273", color="primary", style="primary"),
+            types.InlineKeyboardButton("💬 Help Group", url="https://t.me/WOLVERIN_P", color="secondary", style="secondary")
+        ],
+        [
+            types.InlineKeyboardButton("📊 Status", callback_data="status", color="secondary", style="secondary"),
+            types.InlineKeyboardButton("❓ Help", callback_data="help", color="secondary", style="secondary")
         ]
     ])
     return buttons
 
+# ✅ MODIFIED: BACK BUTTON WITH BLUE COLOR
 async def back_button_only():
     buttons = types.InlineKeyboardMarkup([
-        [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+        [types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu", color="primary", style="primary")]
+    ])
+    return buttons
+
+# ✅ MODIFIED: HELP BUTTONS WITH BLUE COLOR
+async def help_buttons():
+    buttons = types.InlineKeyboardMarkup([
+        [types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu", color="primary", style="primary")],
+        [types.InlineKeyboardButton("📢 Channel", url="https://t.me/wolverine273", color="primary", style="primary")]
     ])
     return buttons
 
@@ -175,6 +189,38 @@ async def callback_handler(bot, callback_query):
             f"**📌 Example 2 (Multiple):**\n"
             f"`/set_buttons 📢 Channel:https://t.me/wolverine273 | 💬 Group:https://t.me/WOLVERIN_P`\n\n"
             f"⚠️ This command only works in **channel**, not in private chat!",
+            reply_markup=buttons
+        )
+        await callback_query.answer()
+    
+    elif data == "status":
+        await status_cmd(bot, callback_query.message, from_callback=True)
+        await callback_query.answer()
+    
+    elif data == "help":
+        buttons = await help_buttons()
+        await callback_query.message.reply_text(
+            f"**🤖 Auto Caption Bot Help**\n\n"
+            f"**Setup Guide:**\n"
+            f"1️⃣ Add me as admin in your channel\n"
+            f"2️⃣ Go to your channel\n"
+            f"3️⃣ Send `/set_caption Your caption {{file_name}}`\n"
+            f"4️⃣ Send `/set_buttons Text:URL | Text:URL`\n"
+            f"5️⃣ Send `/set_watermark Your Text` for video thumbnails\n\n"
+            f"**📋 Commands (Send in your channel):**\n"
+            f"📝 `/set_caption` - Set caption\n"
+            f"📎 `/set_buttons` - Set buttons\n"
+            f"🖼️ `/set_watermark` - Set watermark on thumbnails\n"
+            f"❌ `/delcaption` - Delete caption\n"
+            f"🗑️ `/remove_buttons` - Remove buttons\n"
+            f"🗑️ `/remove_watermark` - Remove watermark\n\n"
+            f"**📋 Commands (Private):**\n"
+            f"📊 `/status` - Check settings\n"
+            f"📢 `/help` - Show this help\n\n"
+            f"**📌 Variables in Caption:**\n"
+            f"`{{file_name}}` - Original file name\n\n"
+            f"**📌 Button Format:**\n"
+            f"`[Text]:[URL]` separated by ` | `",
             reply_markup=buttons
         )
         await callback_query.answer()
@@ -397,7 +443,8 @@ async def setButtons(bot, message):
                 url = parts[1].strip()
                 if text and url:
                     if url.startswith(("https://", "http://", "t.me/")):
-                        buttons_data.append([types.InlineKeyboardButton(text, url=url)])
+                        # ✅ MODIFIED: ADD COLOR & STYLE TO DYNAMIC BUTTONS
+                        buttons_data.append([types.InlineKeyboardButton(text, url=url, color="primary", style="primary")])
                     else:
                         return await message.reply_text(f"❌ Invalid URL: `{url}`")
     
@@ -656,21 +703,15 @@ async def remove_watermark(bot, message):
         f"**Channel ID:** `{channel_id}`"
     )
 
-@Client.on_message(filters.private & filters.command("status"))
-async def status_cmd(bot, message):
+async def status_cmd(bot, message, from_callback=False):
     print("✅ /status command triggered!")
-    user_id = message.from_user.id
-    
-    try:
-        await message.delete()
-    except:
-        pass
+    user_id = message.from_user.id if hasattr(message, 'from_user') else message.chat.id
     
     chkData = await getChannelDataByUser(user_id)
     
     if not chkData:
         buttons = await back_button_only()
-        return await message.reply_text(
+        await message.reply_text(
             f"❌ **No settings found!**\n\n"
             f"📌 **How to set:**\n"
             f"1. Add me as admin in your channel\n"
@@ -678,6 +719,7 @@ async def status_cmd(bot, message):
             f"3. I'll auto-detect your channel!",
             reply_markup=buttons
         )
+        return
     
     chnl_id = chkData.get("chnl_id")
     channel_data = await getChannelData(chnl_id)
@@ -697,6 +739,10 @@ async def status_cmd(bot, message):
         f"🔹 **Watermark:** `{watermark}`"
     )
 
+@Client.on_message(filters.private & filters.command("status"))
+async def status_cmd_wrapper(bot, message):
+    await status_cmd(bot, message, from_callback=False)
+
 @Client.on_message(filters.private & filters.command("help"))
 async def help_cmd(bot, message):
     try:
@@ -704,9 +750,7 @@ async def help_cmd(bot, message):
     except:
         pass
     
-    buttons = types.InlineKeyboardMarkup([
-        [types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
-    ])
+    buttons = await help_buttons()
     
     await message.reply_text(
         f"**🤖 Auto Caption Bot Help**\n\n"
@@ -733,20 +777,19 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ✅ AUTO EDIT CAPTION WITH WATERMARK - DUPLICATE FIXED
+# ✅ AUTO EDIT CAPTION WITH WATERMARK
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     global processed_messages
     
     chnl_id = message.chat.id
     
-    # ✅ DUPLICATE CHECK - Skip if already processed
+    # ✅ DUPLICATE CHECK
     msg_key = f"{chnl_id}_{message.id}"
     if msg_key in processed_messages:
         print(f"⏭️ Skipping duplicate message: {msg_key}")
         return
     
-    # ✅ Add to processed set
     processed_messages.add(msg_key)
     if len(processed_messages) > processed_messages_max:
         processed_messages.clear()
@@ -795,7 +838,7 @@ async def auto_edit_caption(bot, message):
         
         print(f"📁 File: {file_name_clean}")
         
-        # ✅ WATERMARK APPLY - ONLY FOR VIDEOS
+        # ✅ WATERMARK APPLY
         watermarked_thumb = None
         if file_type == "video" and WATERMARK_AVAILABLE:
             try:
@@ -819,7 +862,7 @@ async def auto_edit_caption(bot, message):
                 print(f"❌ Watermark module error: {e}")
         
         try:
-            # ✅ LOG TO CHANNEL - ONLY ONCE
+            # ✅ LOG TO CHANNEL
             try:
                 logger = Logger(bot)
                 await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
@@ -835,9 +878,31 @@ async def auto_edit_caption(bot, message):
                 replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name_clean)
             print(f"📝 New caption: {replaced_caption}")
             
-            # Edit caption
+            # ✅ MODIFIED: ADD COLOR & STYLE TO CHANNEL BUTTONS
             if buttons and len(buttons) > 0:
-                reply_markup = types.InlineKeyboardMarkup(buttons)
+                styled_buttons = []
+                for btn_row in buttons:
+                    styled_row = []
+                    for btn in btn_row:
+                        if hasattr(btn, 'url'):
+                            styled_row.append(types.InlineKeyboardButton(
+                                btn.text, 
+                                url=btn.url, 
+                                color="primary", 
+                                style="primary"
+                            ))
+                        elif hasattr(btn, 'callback_data'):
+                            styled_row.append(types.InlineKeyboardButton(
+                                btn.text, 
+                                callback_data=btn.callback_data, 
+                                color="primary", 
+                                style="primary"
+                            ))
+                        else:
+                            styled_row.append(btn)
+                    styled_buttons.append(styled_row)
+                
+                reply_markup = types.InlineKeyboardMarkup(styled_buttons)
                 await message.edit(replaced_caption, reply_markup=reply_markup)
                 print("✅ Caption + Buttons edited!")
             else:
