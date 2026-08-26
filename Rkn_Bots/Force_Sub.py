@@ -19,10 +19,16 @@ async def not_subscribed(_, client, message):
         pass
     return True
 
-
 @Client.on_message(filters.private & filters.create(not_subscribed))
 async def forces_sub(client, message):
-    buttons = [[InlineKeyboardButton(text="📢 Join Update Channel 📢", url=f"https://t.me/{Config.FORCE_SUB}") ]]
+    # ✅ MODIFIED: ADD COLOR & STYLE TO FORCE SUB BUTTON
+    buttons = [[InlineKeyboardButton(
+        text="📢 Join Update Channel 📢", 
+        url=f"https://t.me/{Config.FORCE_SUB}",
+        color="primary",
+        style="primary"
+    )]]
+    
     text = "**Sᴏʀʀy Dᴜᴅᴇ Yᴏᴜ'ʀᴇ Nᴏᴛ Jᴏɪɴᴇᴅ My Cʜᴀɴɴᴇʟ 😐. Sᴏ Pʟᴇᴀꜱᴇ Jᴏɪɴ Oᴜʀ Uᴩᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ Tᴏ Cᴄᴏɴᴛɪɴᴜᴇ**"
     try:
         user = await client.get_chat_member(Config.FORCE_SUB, message.from_user.id)    
@@ -31,4 +37,3 @@ async def forces_sub(client, message):
     except UserNotParticipant:                       
         return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
     return await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
-          
