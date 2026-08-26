@@ -795,7 +795,7 @@ async def auto_edit_caption(bot, message):
         
         print(f"📁 File: {file_name_clean}")
         
-        # ✅ WATERMARK APPLY - ONLY FOR VIDEOS
+        # ✅ WATERMARK APPLY - ONLY FOR VIDEOS (FIXED)
         watermarked_thumb = None
         if file_type == "video" and WATERMARK_AVAILABLE:
             try:
@@ -844,22 +844,58 @@ async def auto_edit_caption(bot, message):
                 await message.edit(replaced_caption)
                 print("✅ Caption edited!")
             
-            # ✅ REPLACE THUMBNAIL WITH WATERMARK
+            # ✅ REPLACE THUMBNAIL WITH WATERMARK - FIXED FOR VIDEOS
             if watermarked_thumb and os.path.exists(watermarked_thumb) and WATERMARK_AVAILABLE:
                 try:
-                    await message.edit_media(
-                        InputMediaPhoto(
-                            media=watermarked_thumb,
-                            caption=message.caption or replaced_caption
+                    if file_type == "video":
+                        # ✅ VIDEO THUMBNAIL REPLACE - Sahi tarika
+                        from pyrogram.types import InputMediaVideo
+                        
+                        video_obj = message.video
+                        
+                        # ✅ InputMediaVideo mein thumbnail daalo
+                        media = InputMediaVideo(
+                            media=video_obj.file_id,
+                            caption=message.caption or replaced_caption,
+                            thumb=watermarked_thumb,  # ✅ Thumbnail replace
+                            duration=video_obj.duration,
+                            width=video_obj.width,
+                            height=video_obj.height,
+                            supports_streaming=video_obj.supports_streaming
                         )
-                    )
-                    print("✅ Thumbnail replaced with watermark!")
-                    try:
-                        os.remove(watermarked_thumb)
-                    except:
-                        pass
+                        
+                        await message.edit_media(media)
+                        print("✅ Video thumbnail replaced with watermark!")
+                        
+                        # ✅ Cleanup
+                        try:
+                            os.remove(watermarked_thumb)
+                        except:
+                            pass
+                    else:
+                        # ✅ For photos, just replace with watermarked photo
+                        await message.edit_media(
+                            InputMediaPhoto(
+                                media=watermarked_thumb,
+                                caption=message.caption or replaced_caption
+                            )
+                        )
+                        print("✅ Photo replaced with watermarked photo!")
+                        try:
+                            os.remove(watermarked_thumb)
+                        except:
+                            pass
+                        
                 except Exception as e:
-                    print(f"❌ Thumbnail replace error: {e}")
+                    if "MESSAGE_NOT_MODIFIED" in str(e):
+                        print("ℹ️ Message already has same content")
+                    else:
+                        print(f"❌ Thumbnail replace error: {e}")
+                        # Cleanup on error
+                        try:
+                            os.remove(watermarked_thumb)
+                        except:
+                            pass
                     
         except FloodWait as e:
             wait_time = e.value if hasattr(e, 'value') else 5
