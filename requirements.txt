@@ -1,4 +1,4 @@
-git+https://github.com/Mayuri-Chan/pyrofork.git
+pyrofork
 tgcrypto
 motor
 aiohttp
