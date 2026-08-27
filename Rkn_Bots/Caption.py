@@ -21,7 +21,7 @@ except Exception as e:
         def __init__(self, bot): pass
         async def process_thumbnail(self, message, text): return None
 
-# ✅ IMPORTANT - THESE VARIABLES MUST BE DEFINED AT TOP
+# ✅ VARIABLES
 processed_messages = set()
 processed_messages_max = 1000
 
@@ -733,7 +733,72 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ✅ AUTO EDIT CAPTION WITH WATERMARK - FINAL WORKING
+# ✅ RESET DB - SIRF USER KA DATA DELETE HOGA (SAFE)
+@Client.on_message(filters.private & filters.command(["reset_db", "reset"]))
+async def reset_db(bot, message):
+    try:
+        user_id = message.from_user.id
+        
+        print(f"🔄 Resetting database for user: {user_id}")
+        
+        # ✅ SIRF IS USER KA DATA DELETE HOGA
+        result1 = await chnl_ids.delete_many({"user_id": user_id})
+        result2 = await chnl_ids.delete_many({"user_id": str(user_id)})
+        
+        # ✅ Users collection mein se bhi sirf is user ko delete karo
+        await users.delete_one({"_id": user_id})
+        
+        total_deleted = result1.deleted_count + result2.deleted_count
+        
+        await message.reply(
+            f"✅ **Your Data Reset Successfully!**\n\n"
+            f"📌 Deleted {total_deleted} channel(s)\n\n"
+            f"**📝 Now Setup Again:**\n"
+            f"1️⃣ Add me as admin in your channel\n"
+            f"2️⃣ Go to your channel\n"
+            f"3️⃣ Send: `/set_watermark @YourChannel`\n"
+            f"4️⃣ Send: `/set_caption Your caption {{file_name}}`\n"
+            f"5️⃣ Send a video to test!\n\n"
+            f"💡 Need help? Send /help"
+        )
+        
+        print(f"✅ Reset successful for user: {user_id}")
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Reset error: {error_msg}")
+        await message.reply(f"❌ **Error:** `{error_msg}`")
+
+# ✅ ADMIN ONLY - DELETE ALL USERS DATA (EMERGENCY)
+@Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("reset_all_users"))
+async def reset_all_users(bot, message):
+    try:
+        total = await total_user()
+        await message.reply(
+            f"⚠️ **WARNING!**\n\n"
+            f"You are about to delete ALL users data!\n"
+            f"Total Users: `{total}`\n\n"
+            f"Send `/confirm_reset_all` to confirm."
+        )
+    except Exception as e:
+        await message.reply(f"❌ Error: {e}")
+
+@Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("confirm_reset_all"))
+async def confirm_reset_all(bot, message):
+    try:
+        # ✅ Delete all data
+        result1 = await chnl_ids.delete_many({})
+        result2 = await users.delete_many({})
+        
+        await message.reply(
+            f"✅ **All Data Deleted!**\n\n"
+            f"📌 Channels: {result1.deleted_count}\n"
+            f"📌 Users: {result2.deleted_count}"
+        )
+    except Exception as e:
+        await message.reply(f"❌ Error: {e}")
+
+# ✅ AUTO EDIT CAPTION WITH WATERMARK
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     global processed_messages
@@ -1020,12 +1085,5 @@ async def restart_bot(b, m):
     await asyncio.sleep(3)
     await rkn_msg.edit("**✅️ 𝙱𝙾𝚃 𝙸𝚂 𝚁𝙴𝚂𝚃𝙰𝚁𝚃𝙴𝙳. 𝙽𝙾𝚆 𝚈𝙾𝚄 𝙲𝙰𝙽 𝚄𝚂𝙴 𝙼𝙴**")
     os.execl(sys.executable, sys.executable, *sys.argv)
-
-@Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("reset_db"))
-async def reset_db(bot, message):
-    print("🔄 Resetting database...")
-    user_id = message.from_user.id
-    await resetUserData(user_id)
-    await message.reply("✅ Database reset for your channel! Please set up again.\n\nAdd me as admin in your channel and send `/set_caption`")
 
 print("✅ Caption.py loaded successfully!")
