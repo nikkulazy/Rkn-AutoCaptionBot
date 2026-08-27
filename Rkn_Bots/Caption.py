@@ -4,14 +4,14 @@ import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids, users
 from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
-from .database import resetChannelData, resetUserData
+from .database import resetChannelData, resetUserData, check_channel_data
 from pyrogram.errors import FloodWait
 from .logger import Logger
 
 # ✅ WATERMARK IMPORT
 try:
     from .thumbnail_watermark import ThumbnailWatermark
-    from pyrogram.types import InputMediaPhoto
+    from pyrogram.types import InputMediaPhoto, InputMediaVideo
     WATERMARK_AVAILABLE = True
     print("✅ Watermark module loaded!")
 except:
@@ -21,7 +21,7 @@ except:
         async def process_thumbnail(self, message, text): return None
     print("⚠️ Watermark module not available")
 
-# ✅ LOG CHANNEL IGNORE - ADD THIS LINE
+# ✅ LOG CHANNEL IGNORE
 LOG_CHANNEL_ID = int(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
 
 # ✅ DUPLICATE TRACKING
@@ -29,10 +29,6 @@ processed_messages = set()
 processed_messages_max = 1000
 
 print("🔄 Loading Caption.py...")
-
-# ✅ DUPLICATE MESSAGE TRACKING
-processed_messages = set()
-processed_messages_max = 1000
 
 async def main_menu_buttons():
     buttons = types.InlineKeyboardMarkup([
@@ -179,7 +175,6 @@ async def callback_handler(bot, callback_query):
         )
         await callback_query.answer()
 
-# ✅ FIXED - No 'await' before get_chat_members
 async def get_channel_owner_or_admin(bot, channel_id):
     try:
         admins = bot.get_chat_members(channel_id, filter=enums.ChatMembersFilter.ADMINISTRATORS)
@@ -571,10 +566,18 @@ async def set_watermark(bot, message):
     except:
         pass
     
-    channel_id = await auto_set_channel(bot, message)
-    if channel_id is None:
+    channel_id = message.chat.id
+    
+    # ✅ CHECK BOT ADMIN
+    is_admin = await check_bot_admin(bot, channel_id)
+    if not is_admin:
+        await message.reply_text(
+            f"❌ **I'm not admin in this channel!**\n\n"
+            f"Please add me as admin first."
+        )
         return
     
+    # ✅ GET USER ID
     user_id = None
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
@@ -595,21 +598,34 @@ async def set_watermark(bot, message):
     
     watermark_text = message.text.split(" ", 1)[1]
     
+    # ✅ SAVE TO DATABASE - BOTH USER AND CHANNEL
     await chnl_ids.update_one(
         {"user_id": user_id}, 
-        {"$set": {"watermark": watermark_text}},
+        {"$set": {"watermark": watermark_text, "chnl_id": channel_id}},
         upsert=True
     )
     await chnl_ids.update_one(
         {"chnl_id": channel_id}, 
-        {"$set": {"watermark": watermark_text}},
+        {"$set": {"watermark": watermark_text, "user_id": user_id}},
         upsert=True
     )
+    
+    # ✅ CHECK IF CAPTION EXISTS, IF NOT SET DEFAULT
+    chkData = await getChannelData(channel_id)
+    if not chkData:
+        await addCap(channel_id, Rkn_Bots.DEF_CAP)
+        await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
+        print(f"✅ Default caption set for channel: {channel_id}")
+    
+    # ✅ VERIFY SAVED DATA
+    verify = await chnl_ids.find_one({"chnl_id": channel_id})
+    print(f"✅ Verified saved data: {verify}")
     
     await message.reply_text(
         f"✅ **Watermark Set Successfully!**\n\n"
         f"**Channel ID:** `{channel_id}`\n"
-        f"**Watermark Text:** `{watermark_text}`"
+        f"**Watermark Text:** `{watermark_text}`\n\n"
+        f"📌 Now send a video in this channel to see the watermark on thumbnail!"
     )
 
 @Client.on_message(filters.command("remove_watermark") & (filters.channel | filters.private))
@@ -733,6 +749,7 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
+# ✅ AUTO EDIT CAPTION WITH WATERMARK - OPTIMIZED
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     global processed_messages
@@ -765,8 +782,6 @@ async def auto_edit_caption(bot, message):
         print(f"❌ No data found for channel: {chnl_id}")
         # ✅ TRY TO GET BY USER ID
         try:
-            chat = await bot.get_chat(chnl_id)
-            # Check if channel has owner/admin
             owner_id = await get_channel_owner_or_admin(bot, chnl_id)
             if owner_id:
                 user_data = await getChannelDataByUser(owner_id)
@@ -852,7 +867,7 @@ async def auto_edit_caption(bot, message):
             print(f"❌ Watermark module error: {e}")
     
     try:
-        # ✅ LOG TO CHANNEL
+        # ✅ LOG TO CHANNEL (ONLY IF NOT ALREADY LOGGED)
         try:
             logger = Logger(bot)
             await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
@@ -870,19 +885,32 @@ async def auto_edit_caption(bot, message):
         
         # ✅ CHECK IF CAPTION NEEDS EDIT
         current_caption = message.caption or ""
+        
         if current_caption != replaced_caption:
-            # ✅ Edit caption
-            if buttons and len(buttons) > 0:
-                reply_markup = types.InlineKeyboardMarkup(buttons)
-                await message.edit(replaced_caption, reply_markup=reply_markup)
-                print("✅ Caption + Buttons edited!")
-            else:
-                await message.edit(replaced_caption)
-                print("✅ Caption edited!")
+            # ✅ Edit caption with flood wait handling
+            try:
+                if buttons and len(buttons) > 0:
+                    reply_markup = types.InlineKeyboardMarkup(buttons)
+                    await message.edit(replaced_caption, reply_markup=reply_markup)
+                    print("✅ Caption + Buttons edited!")
+                else:
+                    await message.edit(replaced_caption)
+                    print("✅ Caption edited!")
+            except FloodWait as e:
+                wait_time = e.value if hasattr(e, 'value') else 5
+                print(f"⏳ FloodWait: {wait_time} seconds")
+                await asyncio.sleep(wait_time)
+                # Retry
+                if buttons and len(buttons) > 0:
+                    reply_markup = types.InlineKeyboardMarkup(buttons)
+                    await message.edit(replaced_caption, reply_markup=reply_markup)
+                else:
+                    await message.edit(replaced_caption)
+                print("✅ Caption edited after flood wait!")
         else:
             print("ℹ️ Caption already same, skipping edit")
         
-        # ✅ SIRF THUMBNAIL REPLACE - INSTANT
+        # ✅ SIRF THUMBNAIL REPLACE - ONLY IF WATERMARK EXISTS
         if watermarked_thumb and os.path.exists(watermarked_thumb) and WATERMARK_AVAILABLE and is_video:
             try:
                 print(f"🔄 Replacing video thumbnail with watermark...")
@@ -896,6 +924,11 @@ async def auto_edit_caption(bot, message):
                     print(f"✅ Video has {len(video_obj.thumbs)} thumbnail(s)")
                 else:
                     print("⚠️ Video has no thumbnail, skipping replace")
+                    try:
+                        os.remove(watermarked_thumb)
+                    except:
+                        pass
+                    return
                 
                 # ✅ Sirf thumbnail replace
                 media = InputMediaVideo(
@@ -908,8 +941,15 @@ async def auto_edit_caption(bot, message):
                     supports_streaming=video_obj.supports_streaming
                 )
                 
-                await message.edit_media(media)
-                print(f"✅ Video thumbnail replaced with watermark! Message ID: {message.id}")
+                try:
+                    await message.edit_media(media)
+                    print(f"✅ Video thumbnail replaced with watermark! Message ID: {message.id}")
+                except FloodWait as e:
+                    wait_time = e.value if hasattr(e, 'value') else 5
+                    print(f"⏳ FloodWait: {wait_time} seconds")
+                    await asyncio.sleep(wait_time)
+                    await message.edit_media(media)
+                    print(f"✅ Video thumbnail replaced after flood wait!")
                 
                 try:
                     os.remove(watermarked_thumb)
@@ -970,7 +1010,6 @@ async def auto_edit_caption(bot, message):
             print(f"❌ Error: {e}")
             import traceback
             traceback.print_exc()
-
 
 # ✅ ADMIN COMMANDS
 @Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["rknusers"]))
