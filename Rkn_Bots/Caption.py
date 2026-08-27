@@ -4,7 +4,7 @@ import asyncio, re, time, sys, os
 from .database import total_user, getid, delete, insert, chnl_ids, users
 from .database import addCap, updateCap, updateButtons, deleteButtons, getChannelData
 from .database import addCapByUser, updateCapByUser, updateButtonsByUser, deleteButtonsByUser, getChannelDataByUser
-from .database import resetChannelData, resetUserData, check_channel_data
+from .database import resetChannelData, resetUserData
 from pyrogram.errors import FloodWait
 from .logger import Logger
 
@@ -14,19 +14,12 @@ try:
     from pyrogram.types import InputMediaPhoto, InputMediaVideo
     WATERMARK_AVAILABLE = True
     print("✅ Watermark module loaded!")
-except:
+except Exception as e:
+    print(f"⚠️ Watermark import error: {e}")
     WATERMARK_AVAILABLE = False
     class ThumbnailWatermark:
         def __init__(self, bot): pass
         async def process_thumbnail(self, message, text): return None
-    print("⚠️ Watermark module not available")
-
-# ✅ LOG CHANNEL IGNORE
-LOG_CHANNEL_ID = int(Rkn_Bots.LOG_CHANNEL) if Rkn_Bots.LOG_CHANNEL else None
-
-# ✅ DUPLICATE TRACKING
-processed_messages = set()
-processed_messages_max = 1000
 
 print("🔄 Loading Caption.py...")
 
@@ -568,16 +561,11 @@ async def set_watermark(bot, message):
     
     channel_id = message.chat.id
     
-    # ✅ CHECK BOT ADMIN
     is_admin = await check_bot_admin(bot, channel_id)
     if not is_admin:
-        await message.reply_text(
-            f"❌ **I'm not admin in this channel!**\n\n"
-            f"Please add me as admin first."
-        )
+        await message.reply_text("❌ **I'm not admin in this channel!**")
         return
     
-    # ✅ GET USER ID
     user_id = None
     if message.reply_to_message and message.reply_to_message.from_user:
         user_id = message.reply_to_message.from_user.id
@@ -598,7 +586,7 @@ async def set_watermark(bot, message):
     
     watermark_text = message.text.split(" ", 1)[1]
     
-    # ✅ SAVE TO DATABASE - BOTH USER AND CHANNEL
+    # ✅ SAVE TO DATABASE
     await chnl_ids.update_one(
         {"user_id": user_id}, 
         {"$set": {"watermark": watermark_text, "chnl_id": channel_id}},
@@ -610,22 +598,17 @@ async def set_watermark(bot, message):
         upsert=True
     )
     
-    # ✅ CHECK IF CAPTION EXISTS, IF NOT SET DEFAULT
+    # ✅ CHECK CAPTION
     chkData = await getChannelData(channel_id)
     if not chkData:
         await addCap(channel_id, Rkn_Bots.DEF_CAP)
         await addCapByUser(user_id, channel_id, Rkn_Bots.DEF_CAP)
-        print(f"✅ Default caption set for channel: {channel_id}")
-    
-    # ✅ VERIFY SAVED DATA
-    verify = await chnl_ids.find_one({"chnl_id": channel_id})
-    print(f"✅ Verified saved data: {verify}")
     
     await message.reply_text(
         f"✅ **Watermark Set Successfully!**\n\n"
         f"**Channel ID:** `{channel_id}`\n"
         f"**Watermark Text:** `{watermark_text}`\n\n"
-        f"📌 Now send a video in this channel to see the watermark on thumbnail!"
+        f"📌 Now send a video to see watermark on thumbnail!"
     )
 
 @Client.on_message(filters.command("remove_watermark") & (filters.channel | filters.private))
@@ -667,10 +650,7 @@ async def remove_watermark(bot, message):
         {"$unset": {"watermark": ""}}
     )
     
-    await message.reply_text(
-        f"✅ **Watermark Removed Successfully!**\n\n"
-        f"**Channel ID:** `{channel_id}`"
-    )
+    await message.reply_text(f"✅ **Watermark Removed Successfully!**")
 
 @Client.on_message(filters.private & filters.command("status"))
 async def status_cmd(bot, message):
@@ -749,7 +729,7 @@ async def help_cmd(bot, message):
         reply_markup=buttons
     )
 
-# ✅ AUTO EDIT CAPTION WITH WATERMARK - OPTIMIZED
+# ✅ AUTO EDIT CAPTION WITH WATERMARK - FINAL WORKING
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     global processed_messages
@@ -763,7 +743,7 @@ async def auto_edit_caption(bot, message):
         return
     
     processed_messages.add(msg_key)
-    if len(processed_messages) > processed_messages_max:
+    if len(processed_messages) > 1000:
         processed_messages.clear()
     
     print(f"📩 New message in channel: {chnl_id}")
@@ -780,25 +760,7 @@ async def auto_edit_caption(bot, message):
     
     if not cap_dets:
         print(f"❌ No data found for channel: {chnl_id}")
-        # ✅ TRY TO GET BY USER ID
-        try:
-            owner_id = await get_channel_owner_or_admin(bot, chnl_id)
-            if owner_id:
-                user_data = await getChannelDataByUser(owner_id)
-                if user_data:
-                    cap_dets = await getChannelData(user_data.get("chnl_id"))
-                    print(f"✅ Found channel data via user: {owner_id}")
-        except:
-            pass
-        
-        if not cap_dets:
-            if message.media:
-                try:
-                    logger = Logger(bot)
-                    await logger.forward_file_to_log(message, chnl_id, channel_title, "Unknown")
-                except Exception as e:
-                    print(f"⚠️ Log error: {e}")
-            return
+        return
     
     if not message.media:
         return
@@ -809,23 +771,11 @@ async def auto_edit_caption(bot, message):
     # Get file name
     file_name_clean = "Unknown_File"
     if message.video and hasattr(message.video, "file_name") and message.video.file_name:
-        file_name_clean = (
-            re.sub(r"@\w+\s*", "", message.video.file_name)
-            .replace("_", " ")
-            .replace(".", " ")
-        )
+        file_name_clean = message.video.file_name
     elif message.document and hasattr(message.document, "file_name") and message.document.file_name:
-        file_name_clean = (
-            re.sub(r"@\w+\s*", "", message.document.file_name)
-            .replace("_", " ")
-            .replace(".", " ")
-        )
+        file_name_clean = message.document.file_name
     elif message.audio and hasattr(message.audio, "file_name") and message.audio.file_name:
-        file_name_clean = (
-            re.sub(r"@\w+\s*", "", message.audio.file_name)
-            .replace("_", " ")
-            .replace(".", " ")
-        )
+        file_name_clean = message.audio.file_name
     elif message.photo:
         file_name_clean = f"Photo_{message.id}"
     
@@ -838,15 +788,6 @@ async def auto_edit_caption(bot, message):
             # ✅ GET WATERMARK FROM DATABASE
             channel_data = await chnl_ids.find_one({"chnl_id": chnl_id})
             watermark_text = channel_data.get("watermark") if channel_data else None
-            
-            # ✅ ALSO CHECK USER DATA
-            if not watermark_text:
-                owner_id = await get_channel_owner_or_admin(bot, chnl_id)
-                if owner_id:
-                    user_data = await chnl_ids.find_one({"user_id": owner_id})
-                    if user_data:
-                        watermark_text = user_data.get("watermark")
-                        print(f"✅ Found watermark via user: {watermark_text}")
             
             if watermark_text:
                 print(f"🖼️ Applying watermark: {watermark_text}")
@@ -867,27 +808,29 @@ async def auto_edit_caption(bot, message):
             print(f"❌ Watermark module error: {e}")
     
     try:
-        # ✅ LOG TO CHANNEL (ONLY IF NOT ALREADY LOGGED)
+        # ✅ LOG TO CHANNEL
         try:
             logger = Logger(bot)
             await logger.forward_file_to_log(message, chnl_id, channel_title, file_name_clean)
         except Exception as e:
             print(f"⚠️ Log error: {e}")
         
+        # ✅ GET CAPTION
         cap = cap_dets.get("caption", Rkn_Bots.DEF_CAP)
         buttons = cap_dets.get("buttons", None)
         
+        # ✅ REPLACE {file_name} WITH ACTUAL FILE NAME
         try:
             replaced_caption = cap.format(file_name=file_name_clean)
-        except KeyError:
-            replaced_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name_clean)
-        print(f"📝 New caption: {replaced_caption}")
+        except:
+            replaced_caption = cap.replace("{file_name}", file_name_clean)
         
-        # ✅ CHECK IF CAPTION NEEDS EDIT
+        print(f"📝 New caption: {replaced_caption[:100]}...")
+        
+        # ✅ EDIT CAPTION
         current_caption = message.caption or ""
         
         if current_caption != replaced_caption:
-            # ✅ Edit caption with flood wait handling
             try:
                 if buttons and len(buttons) > 0:
                     reply_markup = types.InlineKeyboardMarkup(buttons)
@@ -910,77 +853,69 @@ async def auto_edit_caption(bot, message):
         else:
             print("ℹ️ Caption already same, skipping edit")
         
-        # ✅ SIRF THUMBNAIL REPLACE - ONLY IF WATERMARK EXISTS
+        # ✅ REPLACE THUMBNAIL WITH WATERMARK
         if watermarked_thumb and os.path.exists(watermarked_thumb) and WATERMARK_AVAILABLE and is_video:
             try:
                 print(f"🔄 Replacing video thumbnail with watermark...")
                 
-                from pyrogram.types import InputMediaVideo
-                
                 video_obj = message.video
                 
-                # ✅ Check if video has thumbnail
-                if video_obj.thumbs:
-                    print(f"✅ Video has {len(video_obj.thumbs)} thumbnail(s)")
-                else:
-                    print("⚠️ Video has no thumbnail, skipping replace")
+                if not video_obj.thumbs:
+                    print("⚠️ Video has no thumbnail, skipping")
                     try:
                         os.remove(watermarked_thumb)
                     except:
                         pass
                     return
                 
-                # ✅ Sirf thumbnail replace
-                media = InputMediaVideo(
-                    media=video_obj.file_id,
-                    thumb=watermarked_thumb,
-                    caption=message.caption or replaced_caption,
-                    duration=video_obj.duration,
-                    width=video_obj.width,
-                    height=video_obj.height,
-                    supports_streaming=video_obj.supports_streaming
-                )
+                print(f"✅ Video has {len(video_obj.thumbs)} thumbnail(s)")
                 
+                # ✅ REPLACE THUMBNAIL
                 try:
+                    media = InputMediaVideo(
+                        media=video_obj.file_id,
+                        thumb=watermarked_thumb,
+                        caption=message.caption or replaced_caption,
+                        duration=video_obj.duration,
+                        width=video_obj.width,
+                        height=video_obj.height,
+                        supports_streaming=video_obj.supports_streaming
+                    )
+                    
                     await message.edit_media(media)
                     print(f"✅ Video thumbnail replaced with watermark! Message ID: {message.id}")
+                    
                 except FloodWait as e:
                     wait_time = e.value if hasattr(e, 'value') else 5
                     print(f"⏳ FloodWait: {wait_time} seconds")
                     await asyncio.sleep(wait_time)
+                    
+                    media = InputMediaVideo(
+                        media=video_obj.file_id,
+                        thumb=watermarked_thumb,
+                        caption=message.caption or replaced_caption,
+                        duration=video_obj.duration,
+                        width=video_obj.width,
+                        height=video_obj.height,
+                        supports_streaming=video_obj.supports_streaming
+                    )
                     await message.edit_media(media)
                     print(f"✅ Video thumbnail replaced after flood wait!")
                 
                 try:
                     os.remove(watermarked_thumb)
                 except:
-                    pass
-                    
+                    pass                    
             except Exception as e:
                 print(f"❌ Thumbnail replace error: {e}")
-                # ✅ Fallback - send watermark as separate message
                 try:
-                    await bot.send_photo(
-                        chat_id=message.chat.id,
-                        photo=watermarked_thumb,
-                        caption=f"🖼️ **Watermark Applied**\n\n{message.caption or replaced_caption}"
-                    )
-                    print("✅ Watermark sent as separate photo!")
-                    try:
-                        os.remove(watermarked_thumb)
-                    except:
-                        pass
-                except Exception as e2:
-                    print(f"❌ Fallback failed: {e2}")
-                    try:
-                        os.remove(watermarked_thumb)
-                    except:
-                        pass
+                    os.remove(watermarked_thumb)
+                except:
+                    pass
         
-        # ✅ For photos
+        # ✅ FOR PHOTOS
         elif watermarked_thumb and os.path.exists(watermarked_thumb) and WATERMARK_AVAILABLE and message.photo:
             try:
-                from pyrogram.types import InputMediaPhoto
                 await message.edit_media(
                     InputMediaPhoto(
                         media=watermarked_thumb,
