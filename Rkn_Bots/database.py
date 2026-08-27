@@ -116,3 +116,15 @@ async def remove_watermark(chnl_id):
         {"chnl_id": chnl_id}, 
         {"$unset": {"watermark": ""}}
     )
+
+# ============ CHECK CHANNEL DATA ============
+
+async def check_channel_data(chnl_id):
+    """Check if channel data exists"""
+    data = await chnl_ids.find_one({"chnl_id": chnl_id})
+    if data:
+        print(f"✅ Channel data found: {data}")
+        return data
+    else:
+        print(f"❌ No channel data found for: {chnl_id}")
+        return None
