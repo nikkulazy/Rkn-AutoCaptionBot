@@ -21,10 +21,11 @@ except Exception as e:
         def __init__(self, bot): pass
         async def process_thumbnail(self, message, text): return None
 
-print("🔄 Loading Caption.py...")
-
+# ✅ IMPORTANT - THESE VARIABLES MUST BE DEFINED AT TOP
 processed_messages = set()
 processed_messages_max = 1000
+
+print("🔄 Loading Caption.py...")
 
 async def main_menu_buttons():
     buttons = types.InlineKeyboardMarkup([
