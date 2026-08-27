@@ -23,6 +23,9 @@ except Exception as e:
 
 print("🔄 Loading Caption.py...")
 
+processed_messages = set()
+processed_messages_max = 1000
+
 async def main_menu_buttons():
     buttons = types.InlineKeyboardMarkup([
         [
