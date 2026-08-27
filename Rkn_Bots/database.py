@@ -4,7 +4,7 @@ from config import Rkn_Bots
 client = motor.motor_asyncio.AsyncIOMotorClient(Rkn_Bots.DB_URL)
 db = client[Rkn_Bots.DB_NAME]
 chnl_ids = db.chnl_ids
-users = db.users  # ✅ Make sure users collection exists
+users = db.users
 
 async def insert(user_id):
     user_det = {"_id": user_id}
@@ -98,12 +98,10 @@ async def resetUserData(user_id):
 # ============ WATERMARK FUNCTIONS ============
 
 async def get_watermark(chnl_id):
-    """Get watermark text for a channel"""
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
     return data.get("watermark") if data else None
 
 async def set_watermark(chnl_id, watermark_text):
-    """Set watermark text for a channel"""
     await chnl_ids.update_one(
         {"chnl_id": chnl_id}, 
         {"$set": {"watermark": watermark_text}},
@@ -111,7 +109,6 @@ async def set_watermark(chnl_id, watermark_text):
     )
 
 async def remove_watermark(chnl_id):
-    """Remove watermark from a channel"""
     await chnl_ids.update_one(
         {"chnl_id": chnl_id}, 
         {"$unset": {"watermark": ""}}
@@ -120,7 +117,6 @@ async def remove_watermark(chnl_id):
 # ============ CHECK CHANNEL DATA ============
 
 async def check_channel_data(chnl_id):
-    """Check if channel data exists"""
     data = await chnl_ids.find_one({"chnl_id": chnl_id})
     if data:
         print(f"✅ Channel data found: {data}")
